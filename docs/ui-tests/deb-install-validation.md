@@ -1431,6 +1431,20 @@ Notes on the contract:
   `/etc/carlos-emr/carlos.properties`, `carlos-ctl restart`, and re-run: it
   must FAIL. Restore the property and restart afterwards.
 
+### TLS verification for the browser checks (issue #3598)
+
+Every browser context in `scripts/` takes its certificate policy from
+`shouldIgnoreHttpsErrors()` in `scripts/lib/playwright-harness.js`. Certificate
+errors are ignored only when `BASE_URL` is loopback or RFC1918 (the installer's
+self-signed certificate). `ALLOW_NON_LOCAL_BASE_URL=true` lets a check *reach* a
+remote host but does **not** relax certificate verification. To run against a
+remote host that presents a self-signed certificate, also set
+`ALLOW_UNVERIFIED_TLS=true`; `TEST_USER`, `TEST_PASSWORD` and `TEST_PIN` are then
+sent to a host whose identity the browser did not verify. Without it, a
+certificate failure stops with a message naming that variable.
+`scripts/tls-verification-policy.test.js` fails the build if a check hardcodes
+`ignoreHTTPSErrors: true`.
+
 ### Server-log audit
 
 A check can pass while the server threw behind it: an AJAX fragment that failed
