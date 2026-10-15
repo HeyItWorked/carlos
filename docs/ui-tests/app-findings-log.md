@@ -622,6 +622,15 @@ entry, so per the suite's rule they get no check.
 | 277 | **`tickler/AddTickler` has no UI entry.** Every Add Tickler control opens `tickler/ViewAddTickler` (`casemgmt/navigation.jsp:326`, `tickler/ticklerDemoMain.jsp:1102`, `documentManager/showDocument.jsp:512`, `ViewConsultationRequests.jsp:1017`), whose page posts `tickler/DbTicklerAdd`. `AddTickler2Action` (`struts-scheduling.xml:76`) is named only in `ViewAddTickler2Action`'s Javadoc. | Source search of every JSP, JSPF, JS and Java file for the route. | `needs-live-check` |
 | 278 | **The clinic waiting-list pages have no UI entry.** `waitinglist/WLEditWaitingListNameAction` (`struts-scheduling.xml:58`) is reached only from `DisplayWaitingList.jsp:255`, which only `waitinglist/SetupDisplayWaitingList` (`:54`) renders, and nothing outside those pages opens that route; the flip view's `originalpage=waitingList` branch (`scheduleflipview.jsp:99-101`) has no caller either. Patients are still added and removed through the Master Record (`waitinglist/SetupDisplayPatientWaitingList`, `Add2WaitingList`, `RemoveFromWaitingList`), which `waiting-list` covers; list names can only be created by SQL. | Source search, as for 277; `waiting-list-playwright-checks.js` records the same gap in its header. | `needs-live-check` |
 
+## 17. Found by the chart-note lifecycle check (October 2026)
+
+Seen live on `develop` at `0422b8dda1` (15 Oct 2026, private Tomcat on JDK 25, throwaway schema,
+FAKE data).
+
+| # | Defect | Evidence | Status |
+|---|---|---|---|
+| 279 | **Editing a signed chart note and pressing Sign & Save answers HTTP 500, and the edit is not stored.** In the reopened chart, the signed note's Edit link opens it for editing, and Sign & Save (`savePage('saveAndExit')`) posts `observation_date` as a raw timestamp (`2026-10-15 19:03:06.0`, the `java.sql.Timestamp.toString()` form). `CaseManagementEntry2Action.noteSave` (`:1671`) parses it with `dd-MMM-yyyy H:mm` and throws `ParseException`, which the exception interceptor answers with 500. A new note posts `15-Oct-2026 19:03` and saves. The input the edit form renders is formatted (`noteIssueList.jsp:113-115`); where the raw value comes from is not traced yet. | Live: `echart-note-lifecycle` fails at "Sign & Save of the edit stores a new revision with the same uuid and keeps the first one unchanged", and its message carries the posted value (2 of 2 runs). `echart-note-soft-wrap` fails the same way at "Edit-link editor soft-wraps and Sign & Save stores only the typed line breaks" (2 of 3 runs here). Source: `noteSave` parse at `CaseManagementEntry2Action.java:1671`. Not yet compared with the devcontainer. Filed as #4711. | `issue-filed` |
+
 ## How this list is meant to be used
 
 1. A finding here is **not** a reason to weaken a check. The suite's rule is
