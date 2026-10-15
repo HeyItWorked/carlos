@@ -4027,6 +4027,25 @@
       "fixtures": "Owned synthetic patient plus one appointment row (marker in name) at a free slot inside the provider's schedule hours today; on weekend runs the schedule.week_view_weekends property is snapshotted, enabled and restored."
     },
     {
+      "name": "schedule-month-week-links",
+      "script": "scripts/schedule-month-week-links-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "assertsDatabase": true,
+      "env": [
+        "TEST_PASSWORD",
+        "TEST_PIN",
+        "MYSQL_PASSWORD"
+      ],
+      "notes": "Issue #4540 (finding 136): the month view's week numbers open the selected provider's own week view instead of the 404 page (the day sheet lists the viewer's saved view, so the link asks for that provider alone), and are plain text when the month shows All providers, a group, or a provider the viewer's pinned schedule view would hide.",
+      "fixtures": "Owned synthetic patient plus one appointment row (marker in name) for the signed-in provider and one for a second active provider, on the Wednesday of the last week row the month page renders, at a slot free for both inside the signed-in provider's schedule hours; deleted and asserted gone, plus one MyGroupAccessRestriction row restricting the second provider for the signed-in provider, deleted and asserted gone. No preference is touched."
+    },
+    {
       "name": "waiting-list",
       "script": "scripts/waiting-list-playwright-checks.js",
       "tiers": [
