@@ -2487,6 +2487,21 @@
       ]
     },
     {
+      "name": "schedule-role-access",
+      "script": "scripts/schedule-role-access-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "env": [],
+      "notes": "Issue #2689: a receptionist's schedule loads without HTTP errors and polls only the tabs its menu shows (a hidden tab's count is refused 403, an unknown tab 400); an account with no role, and one whose role lacks the schedule, is refused at the landing with a 403 page that explains why and offers Log Out; the doctor baseline still refreshes its tabs.",
+      "fixtures": "One throwaway login whose role rows the check changes between steps, and one owned role without schedule access with its privilege row; all owned rows removed and checked."
+    },
+    {
       "name": "schedule-quick-search-appointment",
       "script": "scripts/schedule-quick-search-appointment-playwright-checks.js",
       "tiers": [
@@ -7032,8 +7047,8 @@
       ],
       "timeoutSec": 600,
       "env": [],
-      "notes": "Checks browser validation and independent direct POST refusals for a weak matching password, a strong mismatched confirmation and an empty password. Refusals must not create a login or creation audit record.",
-      "fixtures": "One owned FAKE- provider row (target of the weak-password probe) and the user names the run attempts; the attempted refusals create no row, the probe's row is deleted in cleanup."
+      "notes": "Checks browser validation and independent direct POST refusals for a weak matching password, a strong mismatched confirmation and an empty password, and (#2689) a missing role choice in the browser plus a POST that omits the role or names one the form does not offer. Refusals must not create a login, role, program membership or creation audit record.",
+      "fixtures": "One owned FAKE- provider row (target of the weak-password and role probes) and the user names the run attempts; the attempted refusals create no row, the probe's row (and any wrongly created role or program membership) is deleted in cleanup."
     },
     {
       "name": "double-submit-appointment",
@@ -10154,7 +10169,7 @@
         "AUTHZ_WRITE_ONLY",
         "AUTHZ_WRITE_MODE"
       ],
-      "notes": "The write half of the role matrix. A role no install seeds holds exactly _demographic r, _appointment w and _eChart r (authzReadFixture.addRole, WRITE_RESTRICTED_PRIVILEGES); its login is in the test login's programs, as a clinic sets up staff, and signs in through the login form. Its top bar has no Administration and no billing entry, and its day sheet shows its own appointment with no Bill link, where the full login's has Administration and a Bill link (no top-bar entry is gated by _billing for any login, so the day-sheet link is the billing-visibility evidence). Its chart (Master Record opened at its address: the role has no Search and no M or E link) shows no Rx \"+\" and no Allergy \"+\", where the full login's shows both; the chart's Bill button lives in the note toolbar, which is not rendered for a role without note rights (ChartNotes.jsp:106-109), so this entry does not judge Bill and prints a NOTE saying so (authz-write-chart-bill judges it). Then, per family (tickler add, Rx Save Only, allergy add, demographic update, provider update, chart note save, Ontario bill save), the full login performs the write through the UI and the captured request is replayed with the restricted login's cookies and its own valid CSRF token (lib/mutation-replay.js, lib/mutation-families.js): it must pass h.assertRefused (the application's 403/405/securityError and an unchanged marker-keyed COUNT(*)), and the same request from the full login must write. The five families before the note save pass on 2026.08 (403, or the securityError redirect for the tickler). Fails at \"chart note save: the restricted login's replay with its own valid token is refused, and the full login's replay writes\": the replay writes the note and only then redirects to securityError?type=_casemgmt.notes (finding 198). The Ontario bill save step after it is not reached while 198 stands; authz-write-role-matrix-billing runs it alone and pins finding 199. Opening the restricted chart makes its four CPP boxes answer 500 (finding 201): the journal gets four ConfigurationException ERRORs per run, which scripts/deb-server-log-audit.sh lists as UNKNOWN, and the restricted schedule's tab-alert refresh logs finding 142 as usual. One script backs four entries, selected by envSet: this one, authz-write-role-matrix-billing (AUTHZ_WRITE_ONLY=billing-on-save), authz-write-chart-bill (AUTHZ_WRITE_MODE=chart-bill) and authz-write-issue-change (AUTHZ_WRITE_MODE=issue-change). Ontario only: the bill family posts the Ontario bill save; the other families have not been run on BC (issue #4439).",
+      "notes": "The write half of the role matrix. A role no install seeds holds exactly _demographic r, _appointment w and _eChart r (authzReadFixture.addRole, WRITE_RESTRICTED_PRIVILEGES); its login is in the test login's programs, as a clinic sets up staff, and signs in through the login form. Its top bar has no Administration and no billing entry, and its day sheet shows its own appointment with no Bill link, where the full login's has Administration and a Bill link (no top-bar entry is gated by _billing for any login, so the day-sheet link is the billing-visibility evidence). Its chart (Master Record opened at its address: the role has no Search and no M or E link) shows no Rx \"+\" and no Allergy \"+\", where the full login's shows both; the chart's Bill button lives in the note toolbar, which is not rendered for a role without note rights (ChartNotes.jsp:106-109), so this entry does not judge Bill and prints a NOTE saying so (authz-write-chart-bill judges it). Then, per family (tickler add, Rx Save Only, allergy add, demographic update, provider update, chart note save, Ontario bill save), the full login performs the write through the UI and the captured request is replayed with the restricted login's cookies and its own valid CSRF token (lib/mutation-replay.js, lib/mutation-families.js): it must pass h.assertRefused (the application's 403/405/securityError and an unchanged marker-keyed COUNT(*)), and the same request from the full login must write. The five families before the note save pass on 2026.08 (403, or the securityError redirect for the tickler). Fails at \"chart note save: the restricted login's replay with its own valid token is refused, and the full login's replay writes\": the replay writes the note and only then redirects to securityError?type=_casemgmt.notes (finding 198). The Ontario bill save step after it is not reached while 198 stands; authz-write-role-matrix-billing runs it alone and pins finding 199. Opening the restricted chart makes its four CPP boxes answer 500 (finding 201): the journal gets four ConfigurationException ERRORs per run, which scripts/deb-server-log-audit.sh lists as UNKNOWN. The restricted schedule's tab-alert refresh no longer logs finding 142 (fixed by #4696). One script backs four entries, selected by envSet: this one, authz-write-role-matrix-billing (AUTHZ_WRITE_ONLY=billing-on-save), authz-write-chart-bill (AUTHZ_WRITE_MODE=chart-bill) and authz-write-issue-change (AUTHZ_WRITE_MODE=issue-change). Ontario only: the bill family posts the Ontario bill save; the other families have not been run on BC (issue #4439).",
       "expectedFailure": {
         "finding": 198,
         "step": "chart note save: the restricted login's replay with its own valid token is refused, and the full login's replay writes"
