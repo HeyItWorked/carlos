@@ -1213,6 +1213,7 @@ function renderRxStage() {
         <br/>
         <fmt:message key="oscarRx.discontinuedReason.msgComment"/><br/>
         <textarea id="disComment" rows="3" cols="45"></textarea><br/>
+        <p id="discontinueChanged" role="alert" hidden><fmt:message key="SearchDrug.discontinue.changed"/></p>
         <input type="button" onclick="document.getElementById('discontinueUI').style.display='none';" value="<fmt:message key="SearchDrug.discontinue.cancel"/>"/>
         <input type="button" onclick="Discontinue2(document.getElementById('disDrugId').value,document.getElementById('disReason').value,document.getElementById('disComment').value,document.getElementById('disDrug').textContent);" value="<fmt:message key="SearchDrug.discontinue.action"/>"/>
 
@@ -1642,9 +1643,9 @@ function renderRxStage() {
         return false;
     }
 
-   function checkAllergy(id,atcCode){
+   function checkAllergy(id,atcCode,din){
      const url = ctx + "/rx/showAllergy";
-     const data="method=allergyData&demographicNo=<%=demoNo%>&atcCode="+encodeURIComponent(atcCode)+"&id="+ encodeURIComponent(id) +"&rand="+ Math.floor(Math.random()*10001);
+     const data="method=allergyData&demographicNo=<%=demoNo%>&atcCode="+encodeURIComponent(atcCode)+"&din="+encodeURIComponent(din || '')+"&id="+ encodeURIComponent(id) +"&rand="+ Math.floor(Math.random()*10001);
      CarlosAllergyAlert.render(document, id, {pending: true});
      CarlosAjax.request(url, {method: 'post', postBody: data,
        requestHeaders: {'Accept': 'application/json'},
@@ -1725,6 +1726,7 @@ function renderRxStage() {
        document.getElementById('disDrug').textContent = drugName;
        document.getElementById('discontinueUI').style.display="";
        document.getElementById('disDrugId').value=id;
+       document.getElementById('discontinueChanged').hidden=true;
 
 
     }
@@ -1746,7 +1748,10 @@ function renderRxStage() {
                   // The discontinued drug no longer counts as a current medication.
                   updateCurrentInteractions();
                     }, onFailure: function (transport) {
-                        if (transport && transport.responseJSON
+                        if (transport && transport.status === 409 && transport.responseJSON
+                                && transport.responseJSON.error === 'STALE_RX_DISCONTINUE') {
+                            document.getElementById('discontinueChanged').hidden=false;
+                        } else if (transport && transport.responseJSON
                                 && transport.responseJSON.error === 'INCOMPLETE_RX_DISCONTINUE') {
                             alert(jsMsg.discontinueIncomplete);
                         } else {
