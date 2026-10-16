@@ -380,6 +380,7 @@
     "test:schedule-template-day-sheet-playwright": "node scripts/schedule-template-day-sheet-playwright-checks.js",
     "test:demographic-cds-import-playwright": "node scripts/demographic-cds-import-playwright-checks.js",
     "test:admin-sites-clinic-numbers-playwright": "node scripts/admin-sites-clinic-numbers-playwright-checks.js",
+    "test:consultation-appointment-time-playwright": "node scripts/consultation-appointment-time-playwright-checks.js",
     "test:admin-manage-sites-playwright": "node scripts/admin-manage-sites-playwright-checks.js",
     "test:consultation-edit-status-playwright": "node scripts/consultation-edit-status-playwright-checks.js",
     "test:consultation-letterhead-playwright": "node scripts/consultation-letterhead-playwright-checks.js",
