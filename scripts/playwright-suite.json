@@ -5101,6 +5101,21 @@
       "fixtures": "Owned patient, an owned messenger group and owned messages; all removed."
     },
     {
+      "name": "messenger-reply-conversation",
+      "script": "scripts/messenger-reply-conversation-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "env": [],
+      "notes": "Plain Reply only: sent and delivered to the sender alone (not to the original's other recipient), the linked patient kept on the reply, and each reader marking only their own copy read. Reply All, the Sent box and Forward are messenger-reply-all-forward's (#4753).",
+      "fixtures": "Three throwaway logins (lib/throwaway-login-fixture.js) enrolled as local messenger contacts (groupMembers_tbl group 0), an owned FAKE- patient, and one message from the first to the other two (the third only receives) delivered by SQL and linked to the patient. Cleanup removes every message whose subject carries the run marker with its delivery and patient-link rows, the contact rows, then the throwaways."
+    },
+    {
       "name": "messenger-reply-all-forward",
       "script": "scripts/messenger-reply-all-forward-playwright-checks.js",
       "tiers": [
