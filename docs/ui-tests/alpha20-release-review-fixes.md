@@ -17,7 +17,7 @@ This change targets `claude/promote-2026.08.0-alpha20`, the head branch of relea
 10. Late review of #4909 found issue deletion preceding date validation. Invalid/future encounter dates now refuse before deletion, CPP updates or session-list changes, with draft recovery. Valid and omitted dates retain issue deletion.
 11. Release review/CI fixes use a private MCEDT staging lock with a real two-thread serialization test, validate billing BDD test naming, and document test-fixture/validated-ASCII static-analysis false positives with focused regression coverage.
 12. Further CI findings remove dynamic report-range regex compilation, decode rich-text transport layers once each, preserve XML token boundaries during route audits, and model fixture-ID collisions correctly. Reported log values use `LogSafe`; consultation print confines rendered attachment paths to CARLOS-owned temporary directories before opening them, including symlink checks. Session form reads and the server-side name/age tag have narrowly documented false-positive annotations backed by authorization and output-encoding tests.
-13. Two serializable request actions keep their security service reference transient and reacquire it when absent, so the service is not serialized and restored actions still enforce permissions.
+13. Three serializable request actions keep their security service reference transient and reacquire it when absent, so the service is not serialized and restored actions still enforce permissions.
 
 ## Role and upgrade compatibility
 
@@ -46,6 +46,6 @@ The user explicitly requested preservation of receptionist and secretary clinica
 - Follow-up Java validation: **4,008 tests, zero failures/errors, two skips**, followed by **75 focused tests, zero failures/errors/skips** after the review corrections (including real concurrent staging, Unicode rejection and issue-delete/date ordering).
 - Further CodeQL correction: **136 focused Java tests passed**, including report range matching, Unicode names, reassignment authorization and transactional archival.
 - Further Semgrep corrections: **147 focused Java tests passed**, including consultation attachment path/symlink refusal, valid attachment printing, clinical issue patient scope, billing setup and demographic save behavior.
-- Sonar reliability correction: **38 focused Java tests passed**, including security-service restoration with read/write refusal and the existing patient-isolation checks.
+- Sonar reliability corrections: **38 focused Java tests passed**, followed by **25 demographic update/stale-form tests**, including security-service restoration with read/write refusal and the existing patient-isolation checks.
 
 The complete follow-up E-Chart walk passes and finding 278 is fixed. The document/inbox stored-markup walk already passes. The existing Rourke PDF tests use the DejaVu test configuration; the default-font failure remains open in #4903. The complete Java tree, every clinical browser workflow and full systemd/installed-upgrade testing were not run locally for these fixes. Release CI and review disposition are tracked on #4902.
