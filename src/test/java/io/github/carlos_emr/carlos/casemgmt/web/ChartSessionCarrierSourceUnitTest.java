@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -211,7 +212,7 @@ class ChartSessionCarrierSourceUnitTest extends CarlosUnitTestBase {
             return false;
         }
         Pattern replacedName = Pattern.compile(REPLACED_NAMES);
-        for (Element element : Jsoup.parse(code).getAllElements()) {
+        for (Element element : Jsoup.parse(code, "", Parser.xmlParser()).getAllElements()) {
             if ("session".equals(element.attr("scope"))
                     && ("bean".equals(element.attr("var"))
                     || ("c:set".equals(element.tagName())
@@ -244,6 +245,7 @@ class ChartSessionCarrierSourceUnitTest extends CarlosUnitTestBase {
         assertThat(hasForbiddenSessionTag("<c:set scope='session' value='a>b' var='demographicNo'/>")).isTrue();
         assertThat(hasForbiddenSessionTag("<c:set var='noteId' scope='session'/>")).isTrue();
         assertThat(hasForbiddenSessionTag("<c:set var='bean' scope='session'/>")).isTrue();
+        assertThat(hasForbiddenSessionTag("<script><c:set scope='session' var='noteId'/></script>")).isTrue();
         assertThat(hasForbiddenSessionTag("<c:set var='noteId' scope='request'/>")).isFalse();
         assertThat(hasForbiddenSessionTag("<c:set var='unrelatedPreference' scope='session'/>")).isFalse();
         assertThat(hasForbiddenSessionTag("<c:set " + "x ".repeat(100_000))).isFalse();
