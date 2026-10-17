@@ -6,6 +6,7 @@ import html
 from http.client import HTTPSConnection
 import json
 import os
+import ssl
 from pathlib import Path
 import sys
 from urllib.error import HTTPError
@@ -60,7 +61,10 @@ def main():
     def fetch_page(params):
         # A fixed HTTPS peer and path prevent file-scheme access and cross-host
         # redirects from forwarding the Sonar token. Only query values are dynamic.
-        connection = HTTPSConnection("sonarcloud.io", timeout=30)
+        # The CI runtime is modern Python. Explicit default context requires both
+        # certificate-chain and hostname verification; the fixed peer cannot redirect.
+        # nosemgrep: python.lang.security.audit.httpsconnection-detected.httpsconnection-detected
+        connection = HTTPSConnection("sonarcloud.io", timeout=30, context=ssl.create_default_context())
         try:
             connection.request("GET", "/api/issues/search?" + urlencode(params), headers={
                 "Authorization": "Basic " + auth, "Accept": "application/json"})

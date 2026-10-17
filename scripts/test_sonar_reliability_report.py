@@ -51,7 +51,12 @@ class SonarReliabilityReportTest(unittest.TestCase):
                 patch.object(sonar, "HTTPSConnection", return_value=connection) as peer:
             with self.assertRaises(sonar.HTTPError):
                 sonar.main()
-        peer.assert_called_once_with("sonarcloud.io", timeout=30)
+        peer.assert_called_once()
+        self.assertEqual(("sonarcloud.io",), peer.call_args.args)
+        self.assertEqual(30, peer.call_args.kwargs["timeout"])
+        tls = peer.call_args.kwargs["context"]
+        self.assertEqual(sonar.ssl.CERT_REQUIRED, tls.verify_mode)
+        self.assertTrue(tls.check_hostname)
         connection.request.assert_called_once()
         self.assertEqual("GET", connection.request.call_args.args[0])
         self.assertTrue(connection.request.call_args.args[1].startswith("/api/issues/search?"))
