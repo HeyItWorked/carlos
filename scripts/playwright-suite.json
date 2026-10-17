@@ -12340,6 +12340,21 @@
       "env": [],
       "fixtures": "The owned FAKE- patient and four marker-named custom drugs inserted for it: two current long-term drugs, one current acute drug and one discontinued long-term drug. Cleanup removes the patient's drugs, prescriptions, drugReason and DigitalSignature rows, and asserts none remain. No clinic-wide state is changed.",
       "notes": "The Rx page's \"Represcribe Long Term Meds\" link (rx/rePrescribe2 method=repcbAllLongTerm) stages one card per current long-term drug; Save Only stores the copies and archives each original as represcribed. Steps: the link stages exactly the two current long-term drugs; Save Only stores one long-term copy of each dated today, archives the originals as represcribed and leaves the acute and discontinued drugs alone; the profile then lists each long-term drug once, as its copy. The drugs table has no column linking a copy to its original, so copies are matched by name, instructions and long-term flag."
+    },
+    {
+      "name": "rx-custom-note",
+      "script": "scripts/rx-custom-note-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "env": [],
+      "fixtures": "The owned FAKE- patient only; the note is written through the Rx page (Note ▸ Save Only). Cleanup removes the patient's drugs, prescriptions, drugReason and DigitalSignature rows, and asserts none remain. No clinic-wide state is changed.",
+      "notes": "The Rx page's Note button (rx/WriteScript parameterValue=newCustomNote) stages a free-text card with no drug; Save Only stores it as a drugs row with custom_note=1 under its own prescription. Steps: Note warns, then stages one card with quantity and repeats disabled at 0; Save Only stores exactly one current, not long-term note row with no drug code or brand, carrying the typed text, under one prescription holding only that row; the profile lists the note's text; LAST, the note is stored and listed without a stray \"null\" before its text. Fails on develop and on release/2026.08 at the last step: a note whose Name box is left empty is stored as \"null\" + newline + its text, pending #4873 (release fix #4874). The check turns green when that release fix reaches develop in the forward merge; drop this note then."
     }
   ]
 }
