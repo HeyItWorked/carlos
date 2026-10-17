@@ -4314,6 +4314,21 @@
       "notes": "Skips on the packaged default (caisi=off hides the Issue Editor); with caisi=on its CPP issue-assignment step fails on 2026.08."
     },
     {
+      "name": "admin-password-pin-reset",
+      "script": "scripts/admin-password-pin-reset-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "env": [],
+      "fixtures": "Throwaway login (hash, PIN and roles copied from the test login) reset through Administration > User Management; its cleanup removes the login, provider, SecurityArchive, preference and log rows.",
+      "notes": "Makes two refused sign-ins. When the client address is not on login_local_ip they also count against that address (login_max_failed_times, 3 in the shipped properties)."
+    },
+    {
       "name": "security-password-length",
       "script": "scripts/security-password-length-playwright-checks.js",
       "tiers": [
@@ -5159,6 +5174,20 @@
       "env": [],
       "notes": "Fails at its last step on 2026.08: the schedule date popup preselects the wrong template and Template Code Setting edit truncates apostrophes.",
       "fixtures": "Snapshots and restores one clinic-wide appointment_status label/colour/active flag, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1). Throwaway login with an owned role granting _admin.schedule and a seeded day template; owned template code, far-future holiday and appointment type; all deleted."
+    },
+    {
+      "name": "schedule-template-day-sheet",
+      "script": "scripts/schedule-template-day-sheet-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 600,
+      "env": [],
+      "fixtures": "Throwaway login (doctor plus an owned schedule-administrator role) with its own ProviderPreference and two owned day templates, seeded by SQL; two unused template code characters saved through Template Code Setting (the day sheet reads codes from ScheduleTemplateCodeDao's 30-minute cache, which only DAO writes evict); only the throwaway's own schedule is written (today and tomorrow). Cleanup removes the codes, the throwaway's templates, scheduledate, rschedule and ProviderPreference rows and the role, then the throwaway; the removed codes stay in that cache until the next code save or 30 minutes, which no check reads them through."
     },
     {
       "name": "demographic-cds-import",
@@ -7641,6 +7670,21 @@
       "timeoutSec": 600,
       "env": [],
       "fixtures": "Throwaway login (lib/throwaway-login-fixture.js) plus an owned FAKE- patient and one appointment on the throwaway's own schedule; the shared test provider's preferences are never touched. Cleanup removes the appointment, the throwaway's property/ProviderPreference rows and the throwaway."
+    },
+    {
+      "name": "provider-preference-effects",
+      "script": "scripts/provider-preference-effects-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 600,
+      "env": [],
+      "notes": "Expected to FAIL at its last section's first step, '\"1 months\" is stored and the chart shortens the old note to one line, keeping the recent one in full', until the fix for issue #4818 (held finding 324), release fix PR #4820, reaches develop in the forward merge. The step then turns green; drop this note then. The eChart loads its notes through CaseManagementView method=viewNotesOpt, which never passes cme_note_date to ChartNotesAjax.jsp, so the chart always applies the one-year default. The schedule navigation steps run before it.",
+      "fixtures": "Throwaway login (lib/throwaway-login-fixture.js) with the test provider's program rows, plus an owned FAKE- patient with two signed notes (7 days and 3 months old); the shared test provider's preferences are never touched. Cleanup removes the notes and eChart row, the throwaway's default-program row, then the throwaway with its property rows."
     },
     {
       "name": "gap-provider-schedule-keyboard-shortcuts",
