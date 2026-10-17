@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 CARLOS Contributors. GPL-2.0-or-later. */
 package io.github.carlos_emr.carlos.admin.service;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.carlos_emr.carlos.commn.model.Demographic;
 import io.github.carlos_emr.carlos.commn.model.DemographicExt;
 import io.github.carlos_emr.carlos.commn.model.Provider;
@@ -28,6 +29,8 @@ public class DemographicProviderReassignmentService {
     }
 
     @Transactional
+    // FindSecBugs IMPROPER_UNICODE: maps a validated ASCII A-Z range, never a security identity. See docs/static-analysis-workflows.md
+    @SuppressFBWarnings(value = "IMPROPER_UNICODE", justification = "Name-range endpoints are restricted to one ASCII A-Z/a-z character before Locale.ROOT case mapping; Unicode input is rejected")
     public int reassign(LoggedInInfo user, String operation, String oldProvider, String newProvider,
                         String from, String to) {
         if (user == null || !security.hasPrivilege(user, "_admin.misc", "w", null)) {

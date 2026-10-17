@@ -2847,6 +2847,17 @@ public class CaseManagementEntry2Action extends ActionSupport implements Session
     @SuppressFBWarnings(value = "IMPROPER_UNICODE", justification = "case-insensitive comparison of an internal/domain value (status/flag/enum/MIME/code); not a security or authorization decision")
     public String issueDelete() throws Exception {
         if (!requireIssueWriteAccess()) return NONE;
+        // The issue deletion commits before noteSave below. Refuse invalid dates first,
+        // so a rejected note save cannot leave its issue already deleted.
+        try {
+            if (rejectFutureObservationDate(NoteObservationDate.parse(this.getObservation_date(),
+                    LocaleUtils.resolveBundleLocale(request)))) {
+                return rejectedFullFormSave(this.getCaseNote_note(), "view");
+            }
+        } catch (ParseException unreadable) {
+            rejectObservationDate();
+            return rejectedFullFormSave(this.getCaseNote_note(), "view");
+        }
         logger.debug("issueDelete");
 
         HttpSession session = request.getSession();

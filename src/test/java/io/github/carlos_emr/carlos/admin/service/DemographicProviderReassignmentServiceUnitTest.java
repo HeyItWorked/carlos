@@ -65,6 +65,15 @@ class DemographicProviderReassignmentServiceUnitTest {
         assertThatThrownBy(()->service.reassign(user,"UpdateMrp","999998","999997","Z","A")).isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(demographics);
     }
+    @ParameterizedTest
+    @ValueSource(strings = {"İ", "ı", "ß", "é", "K"})
+    void shouldRejectUnicodeRangeEndpoints_beforeCaseMappingOrQueries(String endpoint) {
+        assertThatThrownBy(() -> service.reassign(user, "UpdateMrp", "999998", "999997", endpoint, "Z"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.reassign(user, "UpdateMrp", "999998", "999997", "A", endpoint))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(demographics, providers);
+    }
     @Test void shouldAllowNoProviderReplacement_whenClearingMrp() {
         allowPatient(101);Demographic patient=new Demographic();patient.setDemographicNo(101);patient.setProviderNo("999998");
         when(demographics.getDemographicsNameRangeByProvider(user,old,"^[A-Z]")).thenReturn(List.of(patient));

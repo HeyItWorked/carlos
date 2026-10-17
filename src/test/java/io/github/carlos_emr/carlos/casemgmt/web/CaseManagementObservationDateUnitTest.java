@@ -328,4 +328,54 @@ class CaseManagementObservationDateUnitTest extends CarlosUnitTestBase {
         verify(manager,never()).saveAndUpdateCaseIssues(any());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"01-Jan-2099 10:00", "2026-10-15 19:14:08.0"})
+    void shouldRefuseInvalidDateBeforeDeletingIssueOrChangingSession(String posted) throws Exception {
+        var issue = new io.github.carlos_emr.carlos.casemgmt.model.CaseManagementIssue();
+        issue.setId(71L);
+        issue.setDemographic_no(101);
+        var entry = new CheckBoxBean();
+        entry.setIssue(issue);
+        form.getIssueCheckList().add(entry);
+        action.setDeleteId("0");
+        action.setObservation_date(posted);
+
+        assertThat(action.issueDelete()).isEqualTo("windowCloseError");
+
+        assertRefusedWithoutChange("Edited FAKE note");
+        assertThat(form.getIssueCheckList()).containsExactly(entry);
+        verify(manager, never()).deleteIssueById(any());
+        verify(manager, never()).removeIssueFromCPP(any(), any());
+        verify(manager, never()).saveAndUpdateCaseIssues(any());
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "14-Oct-2026 10:05"})
+    void shouldKeepIssueDeletionAvailableWithValidOrOmittedDate(String posted) throws Exception {
+        var issue = new io.github.carlos_emr.carlos.casemgmt.model.CaseManagementIssue();
+        issue.setId(71L);
+        issue.setDemographic_no(101);
+        var entry = new CheckBoxBean();
+        entry.setIssue(issue);
+        form.getIssueCheckList().add(entry);
+        // Issues can be removed while the editor holds a new, as-yet-unsaved note.
+        note.setId(null);
+        action.setDeleteId("0");
+        action.setObservation_date(posted);
+        doReturn("").when(action).getDemoName(anyString());
+        doReturn("").when(action).getDemoAge(anyString());
+        doReturn("").when(action).getDemoDOB(anyString());
+        var properties = mock(io.github.carlos_emr.CarlosProperties.class);
+        try (var config = mockStatic(io.github.carlos_emr.CarlosProperties.class)) {
+            config.when(io.github.carlos_emr.CarlosProperties::getInstance).thenReturn(properties);
+
+            assertThat(action.issueDelete()).isEqualTo("view");
+
+            assertThat(response.getStatus()).isEqualTo(200);
+            verify(manager).deleteIssueById(issue);
+            assertThat(form.getIssueCheckList()).isEmpty();
+        }
+    }
+
 }

@@ -1,6 +1,6 @@
 # Alpha20 release review fixes (#4905)
 
-This change targets `claude/promote-2026.08.0-alpha20`, the head branch of release PR #4902. The scope is review items **1, 2, 4, 8, 9, 6 and 5**. It does not approve the release or resolve the other review findings, including the Rourke font investigation (#4903).
+This change targets `claude/promote-2026.08.0-alpha20`, the head branch of release PR #4902. The original scope is review items **1, 2, 4, 8, 9, 6 and 5** (#4905, merged as #4909). Follow-up #4910 addresses remaining-list items **5 and 6**, the E-Chart sinks (finding 278) and day-sheet roster filter (277), directly on the release branch at the user’s request. It does not approve the release or resolve the other review findings, including the Rourke font investigation (#4903).
 
 ## Changes
 
@@ -11,6 +11,11 @@ This change targets `claude/promote-2026.08.0-alpha20`, the head branch of relea
 5. A future encounter date is refused before note mutation or persistence. Save, note-switch save, Sign & Save and Verify & Sign preserve the draft. AJAX saves show a localized validation message; full-form refusals render an encoded recovery draft. A valid-date retry remains possible.
 6. Bulk MRP/resident/nurse/midwife reassignment requires administrative write permission, POST, CSRF and update/access rights on every affected patient. The whole batch is transactional. Managed originals remain unchanged until the existing demographic manager archives them. The existing “No Provider” clearing option remains supported.
 7. Ontario billing commits the claim, appointment/archive update and corrected-bill cleanup in the same transaction. A false/refused cleanup or appointment failure rolls everything back; the review token becomes retryable. Only a committed complete operation is marked saved. Integration tests verify rollback and a single durable result after retry/repeat.
+
+8. Stored tickler/eForm navbar titles, allergy patient names and consultation letterhead/default JavaScript values are encoded in their respective output contexts. Priority formatting and original literal text remain; navbar links fit the visible clipped title area.
+9. Non Rostered Only excludes RO patients across provider/group/all views while retaining NR, TE, blank and NULL statuses. Sorting preserves provider, date range, time window and roster filtering. Only known SQL sort columns are accepted.
+10. Late review of #4909 found issue deletion preceding date validation. Invalid/future encounter dates now refuse before deletion, CPP updates or session-list changes, with draft recovery. Valid and omitted dates retain issue deletion.
+11. Release review/CI fixes use a private MCEDT staging lock with a real two-thread serialization test, validate billing BDD test naming, and document test-fixture/validated-ASCII static-analysis false positives with focused regression coverage.
 
 ## Role and upgrade compatibility
 
@@ -34,6 +39,7 @@ The user explicitly requested preservation of receptionist and secretary clinica
 - **Live reassignment workflow passed:** authorized MRP/resident changes, original-value archives, unchanged non-owned rows, GET/HEAD refusal, tokenless POST refusal, a read-only administrator's valid-token refusal, and “No Provider” clearing.
 - **Live clinical issue authorization passed:** full-access control writes; a chart reader's valid-token replay receives application HTTP 403 and leaves every issue flag unchanged.
 - **Live future-date workflow passed:** Save, Sign & Save and Verify & Sign refuse without persistence and retain drafts; a corrected Save retries successfully.
-- The PHCP report workflow passed its role-update, read-only reader refusal and tokenless-GET refusal assertions. Its later **Non Rostered Only** assertion still fails, as already described in the suite manifest before this change. That unrelated report-filter defect remains open; the complete report workflow is not reported as passing.
+- **Follow-up live report workflow passed completely**, including role-security checks, Non Rostered Only and its positive cases, all sort links retaining filters, and unknown sort-key fallback.
+- Follow-up Java validation: **4,008 tests, zero failures/errors, two skips**, followed by **75 focused tests, zero failures/errors/skips** after the review corrections (including real concurrent staging, Unicode rejection and issue-delete/date ordering).
 
-The broader stored-markup E-Chart walk still fails on six independent sinks outside DemographicNameAgeTag, retained in finding 278. The old expected-failure reference to the fixed tag finding 117 now cites that open finding. The document/inbox stored-markup walk passes across Inbox, eDoc lists and document editing; its old expected-failure pin is removed. The existing Rourke PDF tests use the DejaVu test configuration; the default-font failure remains open in #4903. The complete Java tree, every clinical browser workflow and full systemd/installed-upgrade testing were not run for this fix.
+The follow-up E-Chart walk no longer reports the six markup/script defects from finding 278; complete link-opening verification is in progress. The document/inbox stored-markup walk already passes. The existing Rourke PDF tests use the DejaVu test configuration; the default-font failure remains open in #4903. The complete Java tree, every clinical browser workflow and full systemd/installed-upgrade testing were not run locally for these fixes. Release CI and review disposition are tracked on #4902.

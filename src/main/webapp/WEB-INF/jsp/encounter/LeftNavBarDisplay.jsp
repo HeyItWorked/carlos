@@ -348,9 +348,9 @@ autoCompleted['<carlos:encode value='<%= acItem.key() %>' context="javaScriptBlo
             //url = StringUtils.replaceEach(url, new String[] {"'","\\\""}, new String[] {"\'","\\\""});
             if (item.isURLJavaScript()) {
                 divReloadInfo = trackWindowString(url, divReloadUrl, cmd, pattern);
-                out.println("<a class='links' style='" + colour + "' onmouseover=\"this.className='linkhover'\" onmouseout=\"this.className='links'\" href='#' onclick=\"" + divReloadInfo + url + "\" title='" + SafeEncode.forHtmlAttribute(item.getLinkTitle()) + "'>");
+                out.println("<a class='links' style='" + colour + "display:block;overflow:hidden;text-overflow:ellipsis;' onmouseover=\"this.className='linkhover'\" onmouseout=\"this.className='links'\" href='#' onclick=\"" + divReloadInfo + url + "\" title='" + SafeEncode.forHtmlAttribute(item.getLinkTitle()) + "'>");
             } else {
-                out.println("<a class='links' style='" + colour + "' onmouseover=\"this.className='linkhover'\" onmouseout=\"this.className='links'\" href=\"" + url + "\" title='" + SafeEncode.forHtmlAttribute(item.getLinkTitle()) + "' target=\"_blank\">");
+                out.println("<a class='links' style='" + colour + "display:block;overflow:hidden;text-overflow:ellipsis;' onmouseover=\"this.className='linkhover'\" onmouseout=\"this.className='links'\" href=\"" + url + "\" title='" + SafeEncode.forHtmlAttribute(item.getLinkTitle()) + "' target=\"_blank\">");
             }
             out.println(item.getTitle());
             out.println("</a>");
