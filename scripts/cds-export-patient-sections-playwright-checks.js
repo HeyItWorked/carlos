@@ -66,6 +66,7 @@ function heightsOf(careElements) {
   // Each tag takes its own prefix: the reading is declared in the main schema, its parts in the datatypes schema.
   const tag = (name, close = '') => `<${close}(?:[\\w.-]+:)?${name}>`;
   const part = name => `\\s*${tag(name)}([^<]*)${tag(name, '/')}`;
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- the element names are this file's own fixed literals
   const pattern = new RegExp(`${tag('Height')}${part('Height')}${part('HeightUnit')}${part('Date')}\\s*${tag('Height', '/')}`, 'g');
   return [...careElements.matchAll(pattern)].map(([, value, unit, date]) => ({ value: value.trim(), unit: unit.trim(), date: date.trim() }));
 }

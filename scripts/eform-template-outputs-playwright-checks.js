@@ -44,8 +44,9 @@ async function workflow(s) {
 
   const messageIds = () => sql.rows(`SELECT messageid FROM messagetbl WHERE thesubject=${q(subject)}`).map(([id]) => id);
   const ownedTicklers = `demographic_no=${patient} AND message=${q(ticklerText)}`;
-  const documentIds = () => sql.rows(`SELECT d.document_no FROM document d JOIN ctl_document c ON c.document_no=d.document_no
-    WHERE c.module='demographic' AND c.module_id=${patient} AND d.docdesc=${q(docDesc)}`).map(([id]) => id);
+  // By the marker-named description alone: the template's document is the run's own wherever it was filed, so the
+  // cleanup still finds it (and the final count stays honest) if the filing module or patient is not what was expected.
+  const documentIds = () => sql.rows(`SELECT document_no FROM document WHERE docdesc=${q(docDesc)}`).map(([id]) => id);
   s.cleanup(() => {
     const messages = messageIds();
     h.assert(messages.every(id => POSITIVE.test(id)), 'Owned message id is invalid');
@@ -67,7 +68,7 @@ async function workflow(s) {
     if (documents.length) {
       // An eForm's document keeps its HTML in the row (docxml). Its docfilename is a generated label
       // (a timestamp and "html"); no file is written to the document store, so there is none to remove.
-      sql.execute(`DELETE FROM ctl_document WHERE document_no IN (${documents.join(',')}) AND module_id=${patient};
+      sql.execute(`DELETE FROM ctl_document WHERE document_no IN (${documents.join(',')});
         DELETE FROM document WHERE document_no IN (${documents.join(',')}) AND docdesc=${q(docDesc)}`);
       removeDocumentResidue(sql, residue, documents);
     }

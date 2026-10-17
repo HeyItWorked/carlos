@@ -3738,7 +3738,7 @@
       ],
       "timeoutSec": 240,
       "env": [],
-      "notes": "Administration > SMS (admin/ConfigureSms): opens with every secret field empty; Save stores a FAKE 555-01xx sender with SMS and its scheduler off and keeps the typed webhook secret out of the page; a GET with method=configure is refused with 405. Never presses Send system test. SKIP when the test login holds no _admin.sms right (a database loaded from the development snapshot after its migrations needs V1.0.71 re-run).",
+      "notes": "Administration > SMS (admin/ConfigureSms): opens with every secret field empty; Save stores a FAKE 555-01xx sender with SMS and its scheduler off and keeps the typed webhook secret out of the page; a GET with method=configure is refused with 405. Never presses Send system test. SKIP when the database has no sms_config table (a build without the SMS settings page, such as release/2026.08) or when the test login holds no _admin.sms right (a database loaded from the development snapshot after its migrations needs V1.0.71 re-run).",
       "fixtures": "No rows created by the check itself; sms_config is snapshotted byte-exact and restored (the rows the save makes are removed). SMS settings are clinic-wide, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1).",
       "mutates": [
         "sms_config"

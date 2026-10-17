@@ -14,6 +14,7 @@
 // and 3. Cleanup removes the patient's drugs and asserts none remain. No clinic-wide state is changed.
 const h = require('./lib/playwright-harness');
 const { runWorkflow, expectValue } = require('./lib/workflow-session');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 const q = h.sqlString;
 const isPost = route => response => response.request().method() === 'POST' && h.pathOnly(response.url()).endsWith(route);
@@ -42,8 +43,8 @@ async function workflow(s) {
   const positions = () => JSON.stringify(sql.rows(`SELECT drugid, position FROM drugs WHERE demographic_no=${patient} ORDER BY drugid`));
   const expected = (lowAt, middleAt, highAt) => JSON.stringify([[low, String(lowAt)], [middle, String(middleAt)], [high, String(highAt)]]);
 
-  // The Master Record's Prescriptions link: an onclick on older pages, a .patient-nav href since #4468.
-  const rx = await s.popup(s.master, s.master.locator('a[onclick*="/rx/choosePatient"], .patient-nav a[href*="/rx/choosePatient"]').first(),
+  // The Master Record's Prescriptions link, by the URL it opens (an onclick on older pages, a .patient-nav href since #4468).
+  const rx = await s.popup(s.master, masterRecordLink(s.master, '/rx/choosePatient').first(),
     'rx-module');
   h.assert(new URL(rx.url()).searchParams.get('demographicNo') === patient, 'The Rx module opened for another patient');
   await rx.locator('#searchString').waitFor({ state: 'visible' });

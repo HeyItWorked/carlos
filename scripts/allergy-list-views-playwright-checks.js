@@ -46,6 +46,7 @@ async function workflow(s) {
   const row = id => page.locator(`#allergy_${id}`);
   /** Switch the list to one of its views through the view menu, the way the clinician does. */
   async function view(name) {
+    // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- this check's own fixed view labels (Active, Inactive, All)
     await clickAndAwaitReload(page, page.locator('span.view_menu a', { hasText: new RegExp(`^${name}$`) }));
     assert((await page.locator('span.view_selected').innerText()).trim() === name, `The ${name} view is not selected`);
   }

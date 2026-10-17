@@ -222,8 +222,9 @@ async function workflow(s) {
     sql.execute(`INSERT INTO ctl_document (module,module_id,document_no,status) VALUES ('demographic',${patient},${documentNo},'A')`);
     const chart = await s.chart();
     const link = chart.locator(`#leftNavBar a[onclick*="segmentID=${documentNo}'"], #rightNavBar a[onclick*="segmentID=${documentNo}'"]`).first();
-    // Since #4741 the Documents panel files documents into collapsed folders by type (the provider's eChart
-    // preference, on by default): open the document's folder first, as document-pagination does.
+    // Where the Documents panel files documents into collapsed folders by type (#4741, the provider's eChart
+    // preference, on by default; release/2026.08 has no folders): open the document's folder first, as
+    // document-pagination does. With no folder to open this reveals nothing.
     await link.waitFor({ state: 'attached', timeout: TIMEOUT });
     await revealAuditLink(chart, link, TIMEOUT);
     // The trailing date <span> overlays the link's centre (as in the eChart navbar), so click its start.

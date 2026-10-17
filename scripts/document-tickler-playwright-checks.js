@@ -18,6 +18,7 @@
 const h = require('./lib/playwright-harness');
 const ui = require('./lib/playwright-ui');
 const { runWorkflow, expectValue } = require('./lib/workflow-session');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 const q = h.sqlString;
 const POSITIVE = /^[1-9]\d*$/;
@@ -96,10 +97,9 @@ async function workflow(s) {
 
   let ticklerNo;
   await s.step('Master Record ▸ Documents ▸ Tickler on the patient\'s document: Save stores the tickler with the document attached', async () => {
-    // The Master Record's Documents link: an onclick popup on older pages, an href the shared patient navigation
-    // opens as a popup since #4468.
-    const documents = s.master.locator('a[onclick*="/documentManager/ViewDocumentReport?function=demographic"],'
-      + ' a[href*="/documentManager/ViewDocumentReport?function=demographic"]').first();
+    // The Master Record's Documents link, by the URL it opens (an onclick on older pages, an href the shared patient
+    // navigation opens as a popup since #4468).
+    const documents = masterRecordLink(s.master, '/documentManager/ViewDocumentReport?function=demographic').first();
     const report = await s.popup(s.master, documents, 'edoc-patient');
     await report.getByText(patientDocDesc).first().waitFor({ state: 'attached' });
     const links = await ticklerLinks(report, patientDoc);

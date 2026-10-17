@@ -15,6 +15,7 @@
  *
  * Fixtures: none created. sms_config is snapshotted byte-exact (hex, every column) before the first
  * click; cleanup deletes the rows the run made and restores the snapshot. EXCLUSIVE=1: clinic-wide.
+ * SKIP: a database without sms_config (a build without the SMS settings page), or a login without _admin.sms.
  */
 const h = require('./lib/playwright-harness');
 const { runWorkflow, expectValue } = require('./lib/workflow-session');
@@ -26,7 +27,14 @@ const SENDER = '+15550100';
 
 async function workflow(s) {
   const { sql, marker } = s;
-  const snapshot = () => sql.rows(`SELECT ${COLUMNS.map(c => `IF(${c} IS NULL,'N',CONCAT('X',HEX(${c})))`).join(',')} FROM sms_config ORDER BY id`);
+  // The SMS settings page and its table (#3836) are on develop, not on every release line: a database without
+  // sms_config has no page to check, and the snapshot below would fail on the missing table before any skip.
+  if (sql.value("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='sms_config'") !== '1') {
+    throw new h.SkipCheck('The database has no sms_config table: the SMS settings page is not in this build, or its migration has not run');
+  }
+  // 'N' is NULL; 'X' + hex is the value. CAST ... AS BINARY makes HEX read a number's text (id, version, the flags)
+  // rather than its value, so UNHEX puts the same number back; HEX of the bare number would restore a one-byte string.
+  const snapshot = () => sql.rows(`SELECT ${COLUMNS.map(c => `IF(${c} IS NULL,'N',CONCAT('X',HEX(CAST(${c} AS BINARY))))`).join(',')} FROM sms_config ORDER BY id`);
   const before = snapshot();
   s.cleanup(() => {
     const value = cell => (cell === 'N' ? 'NULL' : `UNHEX('${cell.slice(1)}')`);

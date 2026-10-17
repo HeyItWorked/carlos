@@ -25,6 +25,7 @@
 // prescriptions by key in case a regression saved one, and asserts none remain. No clinic-wide state is changed.
 const h = require('./lib/playwright-harness');
 const { runWorkflow } = require('./lib/workflow-session');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 const SEARCH_TERM = process.env.RX_SEARCH_TERM || 'LIPITOR';
 // Letters DrugRef has no product for.
@@ -45,8 +46,8 @@ async function workflow(s) {
       + (SELECT COUNT(*) FROM prescription WHERE demographic_no=${patient})`) === '0', 'Owned Rx rows were not removed');
   });
 
-  // The Master Record's Prescriptions link: an onclick on older pages, a .patient-nav href since #4468.
-  const rx = await s.popup(s.master, s.master.locator('a[onclick*="/rx/choosePatient"], .patient-nav a[href*="/rx/choosePatient"]').first(),
+  // The Master Record's Prescriptions link, by the URL it opens (an onclick on older pages, a .patient-nav href since #4468).
+  const rx = await s.popup(s.master, masterRecordLink(s.master, '/rx/choosePatient').first(),
     'rx-module');
   h.assert(new URL(rx.url()).searchParams.get('demographicNo') === patient, 'The Rx module opened for another patient');
   const box = rx.locator('#searchString');

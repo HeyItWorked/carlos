@@ -85,6 +85,7 @@ const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function reviewLine(name, status, comment) {
   const time = status === ACKNOWLEDGED ? ' \\d{2}-[A-Z][a-z]{2}-\\d{2} \\d{2}:\\d{2},' : '';
   const tail = comment ? `comment : ${escapeRegExp(comment)}` : 'no comment';
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- every interpolated value goes through escapeRegExp
   return new RegExp(`^${escapeRegExp(name)} : ${escapeRegExp(status)}${time} ${tail}$`);
 }
 

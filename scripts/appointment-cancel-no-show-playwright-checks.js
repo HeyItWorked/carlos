@@ -30,8 +30,9 @@ async function workflow(s) {
   const fixture = createUnbookedThrowaway(s);
   registerAppointmentCleanup(s, fixture);
   const owner = h.sqlString(fixture.providerNo);
-  const today = new Date();
-  const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  // The schedule opens on the server's today, which can differ from the runner's clock around midnight; the database date
+  // is the one the other checks seed against (CURDATE()).
+  const dateKey = sql.value("SELECT DATE_FORMAT(CURDATE(),'%Y-%m-%d')");
   const name = `${marker},Workflow`;
   // Non-empty values for every kept column, so "unchanged" cannot hold by accident; style and billing are VARCHAR(10).
   const marked = h.sqlString(marker);

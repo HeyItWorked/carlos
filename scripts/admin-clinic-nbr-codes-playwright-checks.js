@@ -26,7 +26,9 @@ const COLUMNS = ['nbr_id', 'nbr_value', 'nbr_string', 'nbr_status'];
 async function workflow(s) {
   const { sql, marker } = s;
   const q = h.sqlString;
-  const snapshot = () => sql.rows(`SELECT ${COLUMNS.map(c => `IF(${c} IS NULL,'N',CONCAT('X',HEX(${c})))`).join(',')} FROM clinic_nbr ORDER BY nbr_id`);
+  // 'N' is NULL; 'X' + hex is the value. CAST ... AS BINARY makes HEX read a number's text (nbr_id) rather than its
+  // value, so UNHEX puts the same number back; HEX of the bare number would restore a one-byte string, not the number.
+  const snapshot = () => sql.rows(`SELECT ${COLUMNS.map(c => `IF(${c} IS NULL,'N',CONCAT('X',HEX(CAST(${c} AS BINARY))))`).join(',')} FROM clinic_nbr ORDER BY nbr_id`);
   const before = snapshot();
   const lastId = sql.value('SELECT COALESCE(MAX(nbr_id), 0) FROM clinic_nbr');
   s.cleanup(() => {

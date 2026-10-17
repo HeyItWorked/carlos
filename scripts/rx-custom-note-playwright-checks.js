@@ -15,6 +15,7 @@
 // prescriptions, drugReason and DigitalSignature rows, and asserts none remain. No clinic-wide state is changed.
 const h = require('./lib/playwright-harness');
 const { runWorkflow, expectValue } = require('./lib/workflow-session');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 const isPost = route => response => response.request().method() === 'POST' && h.pathOnly(response.url()).endsWith(route);
 /** Waits for the response the predicate names; a timeout says which request never answered. */
@@ -33,8 +34,8 @@ async function workflow(s) {
       + (SELECT COUNT(*) FROM DigitalSignature WHERE demographicId=${patient})`) === '0', 'Owned Rx rows were not removed');
   });
 
-  // The Master Record's Prescriptions link: an onclick on older pages, a .patient-nav href since #4468.
-  const rx = await s.popup(s.master, s.master.locator('a[onclick*="/rx/choosePatient"], .patient-nav a[href*="/rx/choosePatient"]').first(),
+  // The Master Record's Prescriptions link, by the URL it opens (an onclick on older pages, a .patient-nav href since #4468).
+  const rx = await s.popup(s.master, masterRecordLink(s.master, '/rx/choosePatient').first(),
     'rx-module');
   h.assert(new URL(rx.url()).searchParams.get('demographicNo') === patient, 'The Rx module opened for another patient');
   await rx.locator('#searchString').waitFor({ state: 'visible' });

@@ -89,6 +89,7 @@ async function workflow(s) {
     const listed = { start: cells[1]?.trim(), written: cells[3]?.trim() };
     h.assert(listed.start === '2019/05' && listed.written === '2019', `The static script page lists ${JSON.stringify(listed)}`);
     const record = await s.popup(rx, rx.locator(recordLink).first(), 'rx-record');
+    // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- label is one of this check's own fixed field names (Rx Date, Written Date)
     const field = async label => (await record.locator('td.label', { hasText: new RegExp(`^${label}:$`) }).first()
       .locator('xpath=following-sibling::td[1]').innerText()).trim();
     const shown = { rxDate: await field('Rx Date'), written: await field('Written Date') };

@@ -42,18 +42,20 @@ async function workflow(s) {
   const original = rows();
   h.assert(original.length === 1, `Expected one clinic row, found ${original.length}`);
   const [[clinicNo]] = original;
-  // Byte-exact snapshot: every column as HEX, with NULL kept apart from ''.
-  const columns = [...Object.values(COLUMNS), 'status'];
-  const snapshotQuery = `SELECT ${columns.map(c => `IF(${c} IS NULL,'NULL',HEX(${c}))`).join(',')} FROM clinic WHERE clinic_no=${clinicNo}`;
-  const [snapshot] = sql.rows(snapshotQuery);
   h.assert(/^[1-9]\d*$/.test(clinicNo), 'The clinic row has no numeric id');
+  // Byte-exact snapshot: each column is 'N' for NULL or 'X' + HEX of its text, so NULL stays apart from ''. `mysql -B`
+  // prints NULL and the text 'NULL' alike and the harness reads both as null, so neither marker may be spelled NULL.
+  // CAST ... AS BINARY makes HEX read a number's text (status) rather than its value, so UNHEX puts the same number back.
+  const columns = [...Object.values(COLUMNS), 'status'];
+  const snapshotQuery = `SELECT ${columns.map(c => `IF(${c} IS NULL,'N',CONCAT('X',HEX(CAST(${c} AS BINARY))))`).join(',')} FROM clinic WHERE clinic_no=${clinicNo}`;
+  const [snapshot] = sql.rows(snapshotQuery);
+  h.assert(snapshot.every(value => value === 'N' || /^X[0-9A-F]*$/.test(value)), 'The clinic snapshot is not N or X plus hex');
   s.cleanup(() => {
     // The failure this check exists to catch is Submit inserting a second row. The precondition above makes the
     // snapshotted row the only one, so any other row is this run's: remove it (the check is exclusive) before the
     // count is asserted, so the clinic-wide table is left as found and the next run does not stop at its precondition.
     sql.execute(`DELETE FROM clinic WHERE clinic_no<>${clinicNo}`);
-    const assignments = columns.map((column, index) => `${column}=${snapshot[index] === 'NULL' ? 'NULL' : `UNHEX('${snapshot[index]}')`}`);
-    h.assert(snapshot.every(value => value === 'NULL' || /^[0-9A-F]*$/.test(value)), 'The clinic snapshot is not hex');
+    const assignments = columns.map((column, index) => `${column}=${snapshot[index] === 'N' ? 'NULL' : `UNHEX('${snapshot[index].slice(1)}')`}`);
     sql.execute(`UPDATE clinic SET ${assignments.join(',')} WHERE clinic_no=${clinicNo}`);
     h.assert(JSON.stringify(sql.rows(snapshotQuery)[0]) === JSON.stringify(snapshot), 'The clinic row was not restored to its snapshot');
     h.assert(sql.value('SELECT COUNT(*) FROM clinic') === '1', 'A clinic row was added and not removed');
@@ -100,7 +102,8 @@ async function workflow(s) {
   };
   const shown = async () => Object.fromEntries(await Promise.all(Object.keys(COLUMNS).map(async name =>
     [name, await frame.locator(`input[name="${name}"]`).inputValue()])));
-  const asStored = values => Object.fromEntries(Object.entries(values).map(([name, value]) => [name, value === 'NULL' ? '' : value]));
+  // A NULL column reads back as null, and the page shows it as an empty input.
+  const asStored = values => Object.fromEntries(Object.entries(values).map(([name, value]) => [name, value ?? '']));
 
   await s.step('Administration ▸ Clinic/Agency Address opens on the stored clinic row', async () => {
     await openFromMenu('the clinic address page');
