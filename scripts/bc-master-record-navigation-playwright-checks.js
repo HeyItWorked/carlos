@@ -14,6 +14,7 @@ const ui = require('./lib/playwright-ui');
 const { assertPopupDestinations } = require('./page-health-master-record-playwright-checks');
 const { openMasterRecord } = require('./master-record-tabs-playwright-checks');
 const { releaseChartLocks } = require('./lib/chart-lock-cleanup');
+const { masterRecordLink } = require('./lib/master-record-link');
 const VIEWPORTS = [{ width: 1280, height: 720 }, { width: 1600, height: 1000 }];
 const TIMEOUT = 30000;
 const ELIGIBILITY_FRAGMENT = 'Failure-claim &lt;unsafe&gt; &amp; &quot;quoted&quot;<br>'
@@ -91,7 +92,8 @@ async function checkViewport(browser, config, viewport) {
     await masterPage.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     h.assert(requests === 0, 'Hovering or focusing eligibility must not request Teleplan');
 
-    const chartLink = masterPage.locator('a[onclick*="popupEChart"]').first();
+    const chartLink = masterRecordLink(masterPage, 'popupEChart').first();
+    // The Invoice List link is a plain href here (its onclick only reads this.href), outside any .patient-nav.
     const invoiceLink = masterPage.locator('a[href*="/billing/CA/BC/reprocessBill"]').first();
     for (const link of [chartLink, invoiceLink]) await assertCenterIsClickable(link);
     const invoice = await ui.clickOpensPopup(masterPage, invoiceLink, {
