@@ -3224,16 +3224,22 @@ public class CaseManagementEntry2Action extends ActionSupport implements Session
      * pending draft restore. No page sends this method at present. A request that names no patient
      * (or names two) releases nothing.
      *
-     * @return null, always: the method has no view
+     * @return NONE: cleanup does not render a view
      */
     public String cleanup() {
+        clearPatientChartSession();
+        return NONE;
+    }
+
+    /** Session cleanup is a void operation; its action wrapper supplies the Struts result. */
+    private void clearPatientChartSession() {
         String demoNo;
         try {
             demoNo = EncounterPatientContext.requireDemographicNo(request);
         } catch (IllegalArgumentException noPatient) {
             // No chart to release, and every key below needs its patient: this used to fail with
             // a 500 when the encounter entry was forgotten.
-            return null;
+            return;
         }
         String sessionFrmName = "caseManagementEntryForm" + demoNo;
 
@@ -3244,8 +3250,6 @@ public class CaseManagementEntry2Action extends ActionSupport implements Session
         // as it always did.
         request.getSession().removeAttribute(ChartSessionKeys.lastSavedNoteText(demoNo)); // nosemgrep: tainted-session-from-http-request, tainted-session-from-http-request-deepsemgrep -- ChartSessionKeys accepts only a digits-only patient number
         request.getSession().removeAttribute(ChartSessionKeys.draftRestoring(demoNo)); // nosemgrep: tainted-session-from-http-request, tainted-session-from-http-request-deepsemgrep -- ChartSessionKeys accepts only a digits-only patient number
-
-        return null;
     }
 
     public String[] getIssueIds(List<Issue> issues) {
