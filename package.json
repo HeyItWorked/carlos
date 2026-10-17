@@ -701,7 +701,8 @@
     "test:rx-represcribe-long-term-playwright": "node scripts/rx-represcribe-long-term-playwright-checks.js",
     "test:rx-custom-note-playwright": "node scripts/rx-custom-note-playwright-checks.js",
     "test:rx-profile-reorder-playwright": "node scripts/rx-profile-reorder-playwright-checks.js",
-    "test:rx-rerx-cancel-playwright": "node scripts/rx-rerx-cancel-playwright-checks.js"
+    "test:rx-rerx-cancel-playwright": "node scripts/rx-rerx-cancel-playwright-checks.js",
+    "test:rx-search-keyboard-playwright": "node scripts/rx-search-keyboard-playwright-checks.js"
   },
   "dependencies": {
     "@docusaurus/core": "^3.9.2",
