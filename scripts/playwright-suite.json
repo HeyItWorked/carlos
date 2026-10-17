@@ -12370,6 +12370,21 @@
       "env": [],
       "fixtures": "The owned FAKE- patient and three marker-named current custom drugs inserted for it with positions 1, 2 and 3. Cleanup removes the patient's drugs and asserts none remain. No clinic-wide state is changed.",
       "notes": "The drug profile's up and down arrows (rx/reorderDrug method=update) swap the position of two of the patient's drugs; the profile lists drugs highest position first. Steps: the profile shows the three drugs highest position first, with only Down on the top row, both arrows on the middle row and only Up on the bottom row; Down on the top drug swaps its position with the drug below it in the database and the profile order, leaving the third drug alone; Up on it swaps them back and the order holds after a reload."
+    },
+    {
+      "name": "rx-rerx-cancel",
+      "script": "scripts/rx-rerx-cancel-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "env": [],
+      "fixtures": "The owned FAKE- patient and three marker-named current custom drugs inserted for it (A, B, C). Cleanup removes the patient's drugs, prescriptions, drugReason and DigitalSignature rows, and asserts none remain. No clinic-wide state is changed.",
+      "notes": "The Rx page's ReRx confirmation box: Cancel takes every ticked drug off the session's ReRx list (rx/WriteScript updateReRxDrug removeFromReRxDrugIdList), and Save Only does the same, after a warning, for ticks left unstaged. Steps: ticking A and B adds each to the list and shows the box with 2 selected; Cancel takes both off the list, unticks them, hides the box and stages nothing, and the reloaded profile ticks neither; ticking only C, Stage medication and Save Only re-prescribe C alone; with A staged and B ticked but unstaged, Save Only warns, saves A's copy and leaves B current and off the list."
     }
   ]
 }
