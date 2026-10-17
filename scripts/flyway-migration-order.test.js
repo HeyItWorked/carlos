@@ -10,7 +10,8 @@ const order = readLedger(path.join(__dirname, 'flyway-merge-order.txt'))
   .map(([file, mark]) => ({ path: file, forwardMerge: mark === 'forward-merge' }));
 
 test('migrations are listed in merge order, each above the ones before it', () => {
-  assert.ok(order.length > 50, 'must read the seeded ledger');
+  // release/2026.08 seeds 48 migrations (develop seeds 61), so the sanity bound is below both.
+  assert.ok(order.length > 40, 'must read the seeded ledger');
   assert.deepEqual(orderErrors(order, readMigrations()), []);
 });
 

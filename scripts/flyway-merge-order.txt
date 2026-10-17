@@ -8,7 +8,7 @@
 # A released migration that arrives later from a release branch (a forward merge) may sit below:
 # append it with " forward-merge" after the path. Existing development databases then need a rebuild.
 #
-# Baseline: develop as of 2026-10-15 (0422b8dda1), listed in version order.
+# Baseline: release/2026.08 as of 2026-10-17 (a83486da3c), listed in version order.
 common/V1__baseline_schema.sql
 bc/V1.0.1__bc_schema.sql
 on/V1.0.1__on_schema.sql
@@ -56,17 +56,4 @@ common/V1.0.53__decode_diagnostic_description_apostrophes.sql
 common/V1.0.54__allow_dashboard_exclusion_history.sql
 common/V1.0.55__preserve_remittance_health_number_version.sql
 on/V1.0.56__preserve_claim_item_explanations.sql
-common/V1.0.60__portal_booking_prompt_security_object.sql
-common/V1.0.66__add_email_consent_audit.sql
-common/V1.0.67__add_sms_system_of_record.sql
-common/V1.0.68__widen_email_config_for_encrypted_credentials.sql
-common/V1.0.69__prepare_outbound_email_archive_reference_engines.sql
-common/V1.0.70__outbound_email_archive.sql
-common/V1.0.71__add_sms_security_objects.sql
-common/V1.0.72__add_sms_consent.sql
-common/V1.0.73__patient_portal_security_objects.sql
-common/V1.0.74__portal_email_delivery.sql
-common/V1.0.75__patient_portal_invite_delivery.sql
-common/V1.0.76__activate_sms_consent.sql
-common/V1.0.77__one_live_consent_per_type.sql
-common/V1.0.78__add_sms_config.sql
+common/V1.0.57__preserve_rourke2020_immunization_notes.sql
