@@ -682,7 +682,8 @@
     "test:bc-master-record-navigation-playwright": "node scripts/bc-master-record-navigation-playwright-checks.js",
     "test:echart-issues-filter-browser": "node scripts/echart-issues-filter-browser-check.js",
     "test:eform-template-outputs-playwright": "node scripts/eform-template-outputs-playwright-checks.js",
-    "test:eform-template-consult-playwright": "node scripts/eform-template-consult-playwright-checks.js"
+    "test:eform-template-consult-playwright": "node scripts/eform-template-consult-playwright-checks.js",
+    "test:eform-template-document-provider-playwright": "node scripts/eform-template-document-provider-playwright-checks.js"
   },
   "dependencies": {
     "@docusaurus/core": "^3.9.2",
