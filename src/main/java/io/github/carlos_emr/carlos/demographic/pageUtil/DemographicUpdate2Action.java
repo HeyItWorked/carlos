@@ -161,7 +161,7 @@ public class DemographicUpdate2Action extends ActionSupport {
         try {
             demographicNo = Integer.parseInt(demoNo);
         } catch (NumberFormatException e) {
-            logger.warn("DemographicUpdate2Action: invalid demographic_no={}", demoNo);
+            logger.warn("DemographicUpdate2Action: invalid demographic_no={}", LogSafe.sanitize(demoNo));
             addActionError("Invalid patient record identifier");
             return ERROR;
         }
@@ -174,7 +174,7 @@ public class DemographicUpdate2Action extends ActionSupport {
 
         Demographic demographic = demographicDao.getDemographic(demoNo);
         if (demographic == null) {
-            logger.warn("DemographicUpdate2Action: demographic_no={} not found", demoNo);
+            logger.warn("DemographicUpdate2Action: demographic_no={} not found", LogSafe.sanitize(demoNo));
             addActionError("Patient record not found");
             return ERROR;
         }

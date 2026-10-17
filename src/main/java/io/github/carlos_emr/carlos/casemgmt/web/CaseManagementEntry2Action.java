@@ -197,8 +197,10 @@ public class CaseManagementEntry2Action extends ActionSupport implements Session
                 || !securityInfoManager.isAllowedAccessToPatientRecord(user, patient)) {
             throw new SecurityException("missing required security object (_casemgmt.issues w)");
         }
-        CaseManagementEntryFormBean form = (CaseManagementEntryFormBean) request.getSession()
-                .getAttribute("caseManagementEntryForm" + demographicNo);
+        // Read only this session's existing form after numeric patient validation and record authorization;
+        // the note/issue owners are checked below before any mutation. No request value is stored here.
+        // nosemgrep: tainted-session-from-http-request, tainted-session-from-http-request-deepsemgrep
+        CaseManagementEntryFormBean form = (CaseManagementEntryFormBean) request.getSession().getAttribute("caseManagementEntryForm" + demographicNo);
         if (form != null) {
             if (form.getCaseNote() != null && form.getCaseNote().getDemographic_no() != null
                     && !demographicNo.equals(form.getCaseNote().getDemographic_no())) {

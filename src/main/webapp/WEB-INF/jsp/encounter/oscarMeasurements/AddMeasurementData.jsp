@@ -371,6 +371,9 @@
                 <table class="TopStatusBar">
                     <tr>
                         <td>
+                            <%-- This is a server-side tag parameter, not HTML output. The tag parses it as
+                                 an integer and encodes the rendered patient label with SafeEncode. --%>
+                            <%-- nosemgrep: carlos.jsp-scriptlet-xss.variable-request --%>
                             <oscar:nameage demographicNo="<%=demographic_no%>"/>
                         </td>
                         <td>&nbsp;

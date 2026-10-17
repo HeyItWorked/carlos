@@ -90,6 +90,25 @@ class CaseManagementIssueWriteAuthorizationUnitTest extends CarlosUnitTestBase {
         verifyNoInteractions(fixture.manager);
     }
 
+    @Test
+    void shouldRefuseCrossPatientSessionNote_evenWithWriteAccess() throws Exception {
+        var fixture = issueFixture(true);
+        var note = new io.github.carlos_emr.carlos.casemgmt.model.CaseManagementNote();
+        note.setDemographic_no("102");
+        fixture.form.setCaseNote(note);
+        assertThatThrownBy(fixture.action::issueChange).isInstanceOf(SecurityException.class);
+        verifyNoInteractions(fixture.manager);
+    }
+
+    @Test
+    void shouldRefuseMalformedPatientScope_beforeSessionOrClinicalWrite() throws Exception {
+        var fixture = issueFixture(true);
+        ((MockHttpServletRequest) fixture.action.request).setParameter("demographicNo", "101<script>");
+        assertThatThrownBy(fixture.action::issueChange).isInstanceOf(SecurityException.class);
+        verifyNoInteractions(fixture.manager);
+        org.assertj.core.api.Assertions.assertThat(fixture.form.getIssueCheckList().get(0).getIssue().isResolved()).isFalse();
+    }
+
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings={"GET","HEAD","PUT"})
     void shouldRefuseNonPostIssueChanges_beforeAnyWrite(String method) throws Exception {

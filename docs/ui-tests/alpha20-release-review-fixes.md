@@ -16,6 +16,7 @@ This change targets `claude/promote-2026.08.0-alpha20`, the head branch of relea
 9. Non Rostered Only excludes RO patients across provider/group/all views while retaining NR, TE, blank and NULL statuses. Sorting preserves provider, date range, time window and roster filtering. Only known SQL sort columns are accepted.
 10. Late review of #4909 found issue deletion preceding date validation. Invalid/future encounter dates now refuse before deletion, CPP updates or session-list changes, with draft recovery. Valid and omitted dates retain issue deletion.
 11. Release review/CI fixes use a private MCEDT staging lock with a real two-thread serialization test, validate billing BDD test naming, and document test-fixture/validated-ASCII static-analysis false positives with focused regression coverage.
+12. Further CI findings remove dynamic report-range regex compilation, decode rich-text transport layers once each, preserve XML token boundaries during route audits, and model fixture-ID collisions correctly. Reported log values use `LogSafe`; consultation print confines rendered attachment paths to CARLOS-owned temporary directories before opening them, including symlink checks. Session form reads and the server-side name/age tag have narrowly documented false-positive annotations backed by authorization and output-encoding tests.
 
 ## Role and upgrade compatibility
 
@@ -33,7 +34,7 @@ The user explicitly requested preservation of receptionist and secretary clinica
 ## Validation
 
 - **3,994 Java tests, zero failures/errors, two skips**, across 279 selected classes. This includes the four original defect regressions, real CSRF-filter validation, database-backed billing rollback/retry, and managed-entity demographic archival integration coverage.
-- **3,908 script tests: 3,903 passed, zero failures, four skips and one existing TODO** (`npm run test:scripts`). All four demo orphan-link TODOs removed by this change pass as required tests.
+- **3,912 script tests: 3,907 passed, zero failures, four skips and one existing TODO** (`npm run test:scripts`). All four demo orphan-link TODOs removed by this change pass as required tests.
 - WAR build and compilation of **990 JSPs** passed. Dependency-lock and source checks passed.
 - Live Ubuntu 26.04 testing used the previously built alpha20 packages, the candidate WAR/classes, packaged MariaDB/Tomcat/nginx/WAF and Chromium, with services started manually in an unprivileged disposable container. This is application validation on the packaged stack, not a rebuilt-package/systemd lifecycle or installed alpha19 upgrade certification.
 - **Live reassignment workflow passed:** authorized MRP/resident changes, original-value archives, unchanged non-owned rows, GET/HEAD refusal, tokenless POST refusal, a read-only administrator's valid-token refusal, and “No Provider” clearing.
@@ -41,5 +42,7 @@ The user explicitly requested preservation of receptionist and secretary clinica
 - **Live future-date workflow passed:** Save, Sign & Save and Verify & Sign refuse without persistence and retain drafts; a corrected Save retries successfully.
 - **Follow-up live report workflow passed completely**, including role-security checks, Non Rostered Only and its positive cases, all sort links retaining filters, and unknown sort-key fallback.
 - Follow-up Java validation: **4,008 tests, zero failures/errors, two skips**, followed by **75 focused tests, zero failures/errors/skips** after the review corrections (including real concurrent staging, Unicode rejection and issue-delete/date ordering).
+- Further CodeQL correction: **136 focused Java tests passed**, including report range matching, Unicode names, reassignment authorization and transactional archival.
+- Further Semgrep corrections: **147 focused Java tests passed**, including consultation attachment path/symlink refusal, valid attachment printing, clinical issue patient scope, billing setup and demographic save behavior.
 
 The follow-up E-Chart walk no longer reports the six markup/script defects from finding 278; complete link-opening verification is in progress. The document/inbox stored-markup walk already passes. The existing Rourke PDF tests use the DejaVu test configuration; the default-font failure remains open in #4903. The complete Java tree, every clinical browser workflow and full systemd/installed-upgrade testing were not run locally for these fixes. Release CI and review disposition are tracked on #4902.
