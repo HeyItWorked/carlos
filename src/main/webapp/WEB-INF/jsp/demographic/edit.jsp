@@ -1222,7 +1222,7 @@
                         <tr>
                             <td><c:url var="masterRecordLink8" value="/form/forwardshortcutname">
                                         <c:param name="formname" value="AR1"/>
-                                        <c:param name="demographic_no" value='<%= io.github.carlos_emr.carlos.util.StringUtils.noNull(request.getParameter("demographic_no")) %>'/>
+                                        <c:param name="demographic_no" value="${requestScope.demographic.demographicNo}"/>
                                     </c:url>
                                     <a href="${carlos:forHtmlAttribute(masterRecordLink8)}"
                                     onClick="popupPage(700,1000,this.href);return false;">AR1</a>
@@ -1231,7 +1231,7 @@
                         <tr>
                             <td><c:url var="masterRecordLink9" value="/form/forwardshortcutname">
                                         <c:param name="formname" value="AR2"/>
-                                        <c:param name="demographic_no" value='<%= io.github.carlos_emr.carlos.util.StringUtils.noNull(request.getParameter("demographic_no")) %>'/>
+                                        <c:param name="demographic_no" value="${requestScope.demographic.demographicNo}"/>
                                     </c:url>
                                     <a href="${carlos:forHtmlAttribute(masterRecordLink9)}"
                                     onClick="popupPage(700,1000,this.href);return false;">AR2</a>
