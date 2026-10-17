@@ -16,9 +16,9 @@
  *     The first row keeps its text, uuid, signer, signed flag and observation and update dates.
  *   - The chart then shows the edited text once and the revision link reads 2. The history popup
  *     lists both revisions, newest first, for this note and patient only.
- * Known failure (finding 279): on develop, Sign & Save of the edit answers 500, because the edit form
- * posts observation_date as a raw timestamp that noteSave cannot parse; the message names the posted
- * value. The history step after it then does not run.
+ * Finding 279 (#4711): on develop, Sign & Save of the edit answers 500, because the edit form posts
+ * observation_date as a raw timestamp that noteSave cannot parse. It is fixed on release/2026.08 by
+ * #4769, so no step is expected to fail there.
  * Not covered here: Save of an unsigned note, autosave drafts, timers and billing
  * (echart-note-sign-bill, echart-note-editor) or soft wrap (echart-note-soft-wrap).
  *

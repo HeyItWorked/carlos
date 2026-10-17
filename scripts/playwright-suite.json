@@ -1025,11 +1025,7 @@
       ],
       "timeoutSec": 300,
       "fixtures": "Owned synthetic patient; the notes are written through the chart and removed by patient id with their links, exts, issue rows and eChart rows, and verified gone (the runner clears the patient's note locks and drafts).",
-      "expectedFailure": {
-        "finding": 279,
-        "step": "Sign & Save of the edit stores a new revision with the same uuid and keeps the first one unchanged"
-      },
-      "notes": "Expected to fail where finding 279 stands: Sign & Save of an edited signed note answers 500 because the edit form posts observation_date as a raw timestamp. The note-history step after it then does not run."
+      "notes": "Finding 279 (#4711: Sign & Save of an edited signed note answered 500 because the edit form posted observation_date as a raw timestamp) is fixed on release/2026.08 by #4769, so every step is expected to pass there."
     },
     {
       "name": "echart-note-soft-wrap",
@@ -3936,11 +3932,7 @@
       ],
       "timeoutSec": 300,
       "env": [],
-      "notes": "BC MSP bill entry: Create Invoice, diagnosis and fee-code searches, Continue (review), Save Bill; asserts the billing header and billingmaster line, and a 405 for a GET Save Bill. Expected to FAIL at its first step while app-findings-log.md finding 281 stands (the BC bill form answers 500 on every open).",
-      "expectedFailure": {
-        "finding": 281,
-        "step": "Create Invoice opens the BC bill form for the owned patient with the owned billing physician"
-      },
+      "notes": "BC MSP bill entry: Create Invoice, diagnosis and fee-code searches, Continue (review), Save Bill; asserts the billing header and billingmaster line, and a 405 for a GET Save Bill. Finding 281 (#4716: the BC bill form answered 500 on every open) is fixed on release/2026.08 by #4723, so every step is expected to pass there.",
       "fixtures": "Seeds and removes one billing physician (clone of the test login's provider, FAKE practitioner and payee numbers), one BC fee code and one diagnostic code (described by the run marker), and every BC bill of its own FAKE patient."
     },
     {
@@ -3970,11 +3962,7 @@
       ],
       "timeoutSec": 300,
       "env": [],
-      "notes": "BC private bill: Bill Status ▸ receipt ▸ Update Invoice (bill-to and note, 405 for a GET) ▸ Receive Payment (full payment marks the bill paid). Expected to FAIL at the Update Invoice step while app-findings-log.md finding 282 stands (empty billingNo, HTTP 500), and then at the Receive Payment step while finding 164 (#4551) stands.",
-      "expectedFailure": {
-        "finding": 282,
-        "step": "Update Invoice saves the bill-to and the note against the owned bill and keeps its payee"
-      },
+      "notes": "BC private bill: Bill Status ▸ receipt ▸ Update Invoice (bill-to and note, 405 for a GET) ▸ Receive Payment (full payment marks the bill paid). Finding 282 (#4717: Update Invoice answered 500 on an empty billingNo) is fixed on release/2026.08 by #4723 and finding 164 (#4551: Receive Payment saved nothing) by #4659, so every step is expected to pass there.",
       "fixtures": "Seeds and removes one private billing/billingmaster row for its own FAKE patient, and the bill_recipients, billingnote and billing_history rows written for it."
     },
     {

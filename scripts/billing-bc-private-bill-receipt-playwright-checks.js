@@ -21,11 +21,11 @@
  * full payment writes one billing_history row with the amount received and marks the bill paid
  * private (billingstatus A).
  *
- * Expected to FAIL at the Update Invoice step while app-findings-log.md finding 282 stands: the
- * receipt's Update Invoice form posts an empty hidden billingNo and UpdateBilling answers HTTP 500
- * (confirmed live 2026-10-15). Behind it, finding 164 (#4551): receivePayment.jsp reads an
- * attribute no action sets, so its hidden bill and line inputs are empty and its method list has
- * none, and a payment saves nothing.
+ * Finding 282 (#4717): the receipt's Update Invoice form posted an empty hidden billingNo and
+ * UpdateBilling answered HTTP 500 (confirmed live on develop 2026-10-15). Behind it, finding 164
+ * (#4551): receivePayment.jsp read an attribute no action sets, so its hidden bill and line inputs
+ * were empty and its method list had none, and a payment saved nothing. release/2026.08 fixes the
+ * first in #4723 and the second in #4659, so no step is expected to fail there.
  *
  * Fixtures: one private bill (billing + billingmaster, 45.00) for the workflow's own FAKE patient,
  * made a BC patient. Cleanup deletes every BC billing row of that patient, its billing_history,
