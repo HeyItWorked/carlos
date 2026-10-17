@@ -686,7 +686,8 @@
     "test:eform-template-outputs-playwright": "node scripts/eform-template-outputs-playwright-checks.js",
     "test:eform-template-consult-playwright": "node scripts/eform-template-consult-playwright-checks.js",
     "test:eform-template-document-provider-playwright": "node scripts/eform-template-document-provider-playwright-checks.js",
-    "test:appointment-waiting-list-prompt-playwright": "node scripts/appointment-waiting-list-prompt-playwright-checks.js"
+    "test:appointment-waiting-list-prompt-playwright": "node scripts/appointment-waiting-list-prompt-playwright-checks.js",
+    "test:document-tickler-playwright": "node scripts/document-tickler-playwright-checks.js"
   },
   "dependencies": {
     "@docusaurus/core": "^3.9.2",
