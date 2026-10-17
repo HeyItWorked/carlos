@@ -21,7 +21,8 @@
  * Known failures, held for the findings log: with wl_default_issue on, a new patient's first
  * encounter fails with HTTP 500 unless the session holds a program the login is assigned to, and
  * the schedule's CAISI program list offers none to a login without a bed program
- * (EctIncomingEncounter2Action.getIssueIdSet); and codes match as substrings of any issue's code
+ * (EctIncomingEncounter2Action.getIssueIdSet; release/2026.08 opens the encounter since #4843);
+ * and codes match as substrings of any issue's code
  * or description (IssueDAO.findIssueBySearch), so ICSW100 also assigns ICSW1000, and Remove
  * takes off both. Not covered: an encounter that does assign the defaults, which needs a CAISI
  * bed program for the login.
