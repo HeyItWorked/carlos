@@ -46,7 +46,12 @@ async function workflow(s) {
   const columns = [...Object.values(COLUMNS), 'status'];
   const snapshotQuery = `SELECT ${columns.map(c => `IF(${c} IS NULL,'NULL',HEX(${c}))`).join(',')} FROM clinic WHERE clinic_no=${clinicNo}`;
   const [snapshot] = sql.rows(snapshotQuery);
+  h.assert(/^[1-9]\d*$/.test(clinicNo), 'The clinic row has no numeric id');
   s.cleanup(() => {
+    // The failure this check exists to catch is Submit inserting a second row. The precondition above makes the
+    // snapshotted row the only one, so any other row is this run's: remove it (the check is exclusive) before the
+    // count is asserted, so the clinic-wide table is left as found and the next run does not stop at its precondition.
+    sql.execute(`DELETE FROM clinic WHERE clinic_no<>${clinicNo}`);
     const assignments = columns.map((column, index) => `${column}=${snapshot[index] === 'NULL' ? 'NULL' : `UNHEX('${snapshot[index]}')`}`);
     h.assert(snapshot.every(value => value === 'NULL' || /^[0-9A-F]*$/.test(value)), 'The clinic snapshot is not hex');
     sql.execute(`UPDATE clinic SET ${assignments.join(',')} WHERE clinic_no=${clinicNo}`);
