@@ -1,6 +1,6 @@
 # Alpha20 release review fixes (#4905)
 
-This change targets `claude/promote-2026.08.0-alpha20`, the head branch of release PR #4902. The original scope is review items **1, 2, 4, 8, 9, 6 and 5** (#4905, merged as #4909). Follow-up #4910 addresses remaining-list items **5 and 6**, the E-Chart sinks (finding 278) and day-sheet roster filter (277), directly on the release branch at the user’s request. It does not approve the release or resolve the other review findings, including the Rourke font investigation (#4903).
+This change targets `claude/promote-2026.08.0-alpha20`, the head branch of release PR #4902. The original scope is review items **1, 2, 4, 8, 9, 6 and 5** (#4905, merged as #4909). Follow-up #4910 addresses remaining-list items **5 and 6**, the E-Chart sinks (finding 286, recorded as 278 before #4913 renumbered it) and day-sheet roster filter (285), directly on the release branch at the user’s request. It does not approve the release or resolve the other review findings, including the Rourke font investigation (#4903).
 
 ## Changes
 
@@ -51,4 +51,4 @@ The user explicitly requested preservation of receptionist and secretary clinica
 - Sonar reliability corrections: **38 focused Java tests passed**, followed by **25 demographic update/stale-form tests**, including security-service restoration with read/write refusal and the existing patient-isolation checks.
 - Cleanup response correction: **64 focused Java tests passed**, including valid/malformed/conflicting patient cleanup, issue authorization and encounter-date refusal/draft recovery. The preceding release CI run passed the full Java suite and the Toronto/Tokyo date checks; its only remaining failure was the Sonar reliability gate targeted by this correction.
 
-The complete follow-up E-Chart walk passes and finding 278 is fixed. The document/inbox stored-markup walk already passes. The existing Rourke PDF tests use the DejaVu test configuration; the default-font failure remains open in #4903. The complete Java tree, every clinical browser workflow and full systemd/installed-upgrade testing were not run locally for these fixes. Release CI and review disposition are tracked on #4902.
+The complete follow-up E-Chart walk passes and finding 286 is fixed. The document/inbox stored-markup walk already passes. The existing Rourke PDF tests use the DejaVu test configuration; the default-font failure remains open in #4903. The complete Java tree, every clinical browser workflow and full systemd/installed-upgrade testing were not run locally for these fixes. Release CI and review disposition are tracked on #4902.
