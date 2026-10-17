@@ -45,7 +45,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.logging.log4j.Logger;
-import io.github.carlos_emr.carlos.utility.LogSafe;
 import io.github.carlos_emr.carlos.daos.DefaultIssueDao;
 import io.github.carlos_emr.carlos.PMmodule.dao.ProgramAccessDAO;
 import io.github.carlos_emr.carlos.PMmodule.dao.ProgramProviderDAO;
@@ -170,20 +169,7 @@ public class EctIncomingEncounter2Action extends ActionSupport {
             request.getSession().setAttribute("EctSessionBean", bean); // nosemgrep: tainted-session-from-http-request, tainted-session-from-http-request-deepsemgrep
         } else {
             if ("yes".equals(request.getParameter("PEAttach"))) {
-                String selectClientmo = request.getParameter("selectId");
-                String lastId = request.getParameter("noteId");
-                if (selectClientmo == null || !selectClientmo.matches("\\d{1,9}")) {
-                    log.warn("Invalid selectId for PEAttach: {}", LogSafe.sanitize(selectClientmo)); // NOSONAR javasecurity:S5145 — sanitized with LogSafe
-                    return "failure";
-                }
-                if (lastId == null || !lastId.matches("\\d{1,9}")) {
-                    log.warn("Invalid noteId for PEAttach: {}", LogSafe.sanitize(lastId)); // NOSONAR javasecurity:S5145 — sanitized with LogSafe
-                    return "failure";
-                }
-                CaseManagementNote note = caseManagementNoteDao.getNote(Long.parseLong(lastId));
-                note.setId(null);
-                note.setDemographic_no(selectClientmo);
-                caseManagementNoteDao.saveNote(note);
+                return attachNoteToClient(request, response, loggedInInfo, demoNo);
             }
             bean = new EctSessionBean();
             bean.currentDate = UtilDateUtilities.StringToDate(request.getParameter("curDate"));
@@ -270,7 +256,8 @@ public class EctIncomingEncounter2Action extends ActionSupport {
             // source whitelisted to {"encounter","messenger"}; reason/userName sanitized for control chars and length-capped;
             // eChartId is server-generated from setUpEncounterPage()
             request.getSession().setAttribute("EctSessionBean", bean);
-            request.getSession().setAttribute("eChartID", bean.eChartId); // nosemgrep: tainted-session-from-http-request, tainted-session-from-http-request-deepsemgrep -- server-generated ID from EctSessionBean.setUpEncounterPage()
+            // No login-wide eChartID: the legacy editor posts the revision it was opened from
+            // (Index2.jsp's eChartId field), so another window's entry cannot change it (#4673).
 
             long notesCount = caseManagementNoteDao.getNotesCountByDemographicId(bean.getDemographicNo());
             if (notesCount == 0
@@ -311,8 +298,65 @@ public class EctIncomingEncounter2Action extends ActionSupport {
         }
 
         EncounterPatientContext.rememberEncounter(request, bean);
-        setEncounterAttributes(request, bean, loggedInInfo);
+        setEncounterAttributes(request, bean, loggedInInfo, request.getParameter("splitchart") != null, false);
         return "success2";
+    }
+
+    /**
+     * The PMM "attach note to client" popup's result (casemgmt/attachClient.jsp): copies the note
+     * it was opened for into the client's chart, then opens that chart. The client is this
+     * request's own patient ({@code selectId} must equal the validated {@code demographicNo}).
+     *
+     * <p>It used to copy on a GET, which CSRFGuard does not check, any note id into any chart with
+     * only {@code _demographic} read, and the copy kept the source note's uuid, appointment and
+     * issue links. The uuid made the copy the newest revision of the source note, so the source
+     * chart could no longer save or sign that note, and the issue links tied the client's note to
+     * the other patient's issues. It now takes the popup's POST only, needs {@code _casemgmt.notes}
+     * read and record access for the note's own patient and write and record access for the
+     * client, and writes the copy as a new note of the client's: a new uuid, no appointment, no
+     * issues, and only its current text as history. A successful copy redirects to the chart, so
+     * reloading the chart does not copy the note again.</p>
+     *
+     * @return {@link #NONE} after the redirect or a refusal
+     */
+    // FindSecBugs UNVALIDATED_REDIRECT: the redirect goes to this application's own chart route for the
+    // validated numeric patient number, never to a URL taken from the request.
+    @SuppressFBWarnings(value = "UNVALIDATED_REDIRECT", justification = "same-origin redirect to this application's chart route for a validated numeric patient number, never to a URL taken from the request")
+    private String attachNoteToClient(HttpServletRequest request, HttpServletResponse response,
+            LoggedInInfo loggedInInfo, String client) throws IOException {
+        if (!"POST".equals(request.getMethod())) {
+            response.setHeader("Allow", "POST");
+            response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            return NONE;
+        }
+        String noteId = request.getParameter("noteId");
+        if (!client.equals(request.getParameter("selectId")) || noteId == null || !noteId.matches("\\d{1,9}")) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+            return NONE;
+        }
+        CaseManagementNote note = caseManagementNoteDao.getNote(Long.parseLong(noteId));
+        String source = note == null ? null : note.getDemographic_no();
+        if (source == null || !source.matches("[1-9]\\d{0,9}")) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return NONE;
+        }
+        if (!securityInfoManager.hasPrivilege(loggedInInfo, "_casemgmt.notes", "r", source)
+                || !securityInfoManager.isAllowedAccessToPatientRecord(loggedInInfo, Integer.valueOf(source))
+                || !securityInfoManager.hasPrivilege(loggedInInfo, "_casemgmt.notes", "w", client)
+                || !securityInfoManager.isAllowedAccessToPatientRecord(loggedInInfo, Integer.valueOf(client))) {
+            throw new SecurityException("missing required sec object (_casemgmt.notes)");
+        }
+        note.setId(null);
+        note.setUuid(null);
+        note.setDemographic_no(client);
+        note.setAppointmentNo(0);
+        note.setIssues(new HashSet<CaseManagementIssue>());
+        note.setHistory(note.getNote());
+        caseManagementNoteDao.saveNote(note);
+        // demographicNo is the validated, canonical patient number.
+        response.sendRedirect(request.getContextPath() + "/encounter/IncomingEncounter?demographicNo=" + client
+                + "&appointmentNo=0");
+        return NONE;
     }
 
     /** Starts a legacy entry without borrowing another chart window's mutable bean. */
@@ -330,8 +374,13 @@ public class EctIncomingEncounter2Action extends ActionSupport {
     /**
      * Sets request attributes needed by Index2.jsp and its includes.
      * Moves data-fetching logic from JSP scriptlets into the Action layer.
+     *
+     * @param split         render the split-chart continuation of the encounter text
+     * @param savedRevision the bean holds the revision a save just wrote ({@link EctSaveEncounter2Action}):
+     *                      the visit continues, so no new visit header is added to the text
      */
-    private void setEncounterAttributes(HttpServletRequest request, EctSessionBean bean, LoggedInInfo loggedInInfo) {
+    static void setEncounterAttributes(HttpServletRequest request, EctSessionBean bean, LoggedInInfo loggedInInfo,
+                                       boolean split, boolean savedRevision) {
         CarlosProperties oscarProps = CarlosProperties.getInstance();
 
         // Patient age as integer string
@@ -390,7 +439,7 @@ public class EctIncomingEncounter2Action extends ActionSupport {
         request.setAttribute("prescriptions", prescriptions);
 
         // Encounter text and consumption
-        boolean bSplit = request.getParameter("splitchart") != null;
+        boolean bSplit = split;
         int nEctLen = bean.encounter != null ? bean.encounter.length() : 0;
         boolean bTruncate = bSplit && nEctLen > 5120;
         int consumption = (int) ((bTruncate ? 5120 : nEctLen) / (10.24 * 32));
@@ -401,7 +450,7 @@ public class EctIncomingEncounter2Action extends ActionSupport {
         request.setAttribute("bSplit", bSplit);
 
         // Build encounter text
-        String encounterText = buildEncounterText(bean, bSplit, bTruncate, nEctLen);
+        String encounterText = buildEncounterText(bean, bSplit, bTruncate, nEctLen, savedRevision);
         request.setAttribute("encounterText", encounterText);
 
         // CarlosProperties labels
@@ -434,8 +483,12 @@ public class EctIncomingEncounter2Action extends ActionSupport {
     /**
      * Assembles the encounter text from the session bean, handling split chart
      * truncation and date stamp insertion.
+     *
+     * @param savedRevision the text is the revision a save just wrote: no visit header is added,
+     *                      and the entry message is already part of the saved text
      */
-    private String buildEncounterText(EctSessionBean bean, boolean bSplit, boolean bTruncate, int nEctLen) {
+    private static String buildEncounterText(EctSessionBean bean, boolean bSplit, boolean bTruncate, int nEctLen,
+                                             boolean savedRevision) {
         StringBuilder sb = new StringBuilder();
         try {
             if (!bSplit) {
@@ -448,6 +501,9 @@ public class EctIncomingEncounter2Action extends ActionSupport {
                 sb.append("\n--------------------------------------------------\n$$SPLIT CHART$$\n");
             }
 
+            if (savedRevision) {
+                return sb.toString();
+            }
             UtilDateUtilities dateConvert = new UtilDateUtilities();
             if (bean.eChartTimeStamp == null) {
                 sb.append("\n[").append(dateConvert.DateToString(bean.currentDate))
