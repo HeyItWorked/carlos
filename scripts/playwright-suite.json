@@ -12031,6 +12031,32 @@
       ],
       "fixtures": "Owned FAKE- patient; a marker-named eForm in the clinic's eForm library (status 1) whose action template files two provider documents, submitted once through E-Chart > eForms > Add; one marker-named HTML document filed for the login under the older module name \"provider\" (no file; its content is in docxml). The other provider is the lowest-numbered active provider that is not the login. Cleanup deletes the eForm, its saved copy and the three documents (with their chart-note and queue rows, lib/document-residue.js), and asserts none remain. The eForm library and the providers' eDoc lists are clinic-wide (the documents are listed for the login and the other provider while the check runs), so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1).",
       "notes": "The provider documents an eForm's action template files (EFormUtil.writeEformTemplate, <document> with no belong=\"patient\"); eform-template-outputs covers a patient's document. Steps: submitting the eForm saves it once and files a document owned by the login (no <docowner>) and one owned by the other provider (<docowner>), both as provider documents (module \"providers\" today; either spelling is accepted, since the readers treat both alike) as text/html, status H; the login's eDoc list (Schedule > eDoc, ViewDocumentReport?function=providers) shows its template document and its older document filed under \"provider\" (the name before the 2025 package rename a08586ca65; EDocUtil reads both), and not the other provider's; the template document opens with the template's content. Passes on develop and on release/2026.08."
+    },
+    {
+      "name": "appointment-waiting-list-prompt",
+      "script": "scripts/appointment-waiting-list-prompt-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "env": [
+        "MANUALLY_CLEANUP_WL"
+      ],
+      "mutates": [
+        "waitingListName",
+        "waitingList",
+        "appointment"
+      ],
+      "fixtures": "Owned FAKE- patient; a marker-named waiting-list name whose name carries an apostrophe (for the login's schedule group) and the patient's row on it, seeded by SQL as waiting-list does. The check books two appointments for the patient from the Schedule (its reason carries the marker). Cleanup deletes those appointments (and any appointmentArchive rows for them), the waiting-list rows and the list name, and asserts none remain. An active list name makes every booking in the clinic look for waiting-list rows, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1).",
+      "notes": "Booking an appointment for a patient on a waiting list (AppointmentAddRecord2Action, appointmentaddarecord.jsp): the result page asks 'Click OK to remove patient from the waiting list: <name>' and OK posts waitinglist/RemoveFromWaitingList; waiting-list covers the Master Record's waiting-list controls. Steps: the booking is saved and the question names the list as written (apostrophe included), Cancel keeps the patient on the list; a second booking and OK takes the patient off the list (the row becomes history); LAST, the pages on the way link only stylesheets the webapp ships. Set MANUALLY_CLEANUP_WL=yes to mirror a server whose carlos.properties sets it: the check then asserts the booking asks nothing and the patient stays on the list. Passes on release/2026.08 in both modes. Fails at its last step on develop, pinned to finding 100: removeFromWaitingListResult.jsp, the self-closing page OK opens, links /styles.css, which the webapp does not ship (the link came with #1674; release/2026.08's copy of the page has none); the earlier steps pass.",
+      "expectedFailure": {
+        "finding": 100,
+        "step": "the booking and waiting-list pages link only stylesheets the webapp ships"
+      }
     }
   ]
 }
