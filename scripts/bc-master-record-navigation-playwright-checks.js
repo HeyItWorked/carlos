@@ -90,7 +90,7 @@ async function checkViewport(browser, config, viewport) {
     h.assert(requests === 0, 'Hovering or focusing eligibility must not request Teleplan');
 
     const chartLink = masterPage.locator('a[onclick*="popupEChart"]').first();
-    const invoiceLink = masterPage.locator('a[onclick*="/billing/CA/BC/reprocessBill"]').first();
+    const invoiceLink = masterPage.locator('a[href*="/billing/CA/BC/reprocessBill"]').first();
     for (const link of [chartLink, invoiceLink]) await assertCenterIsClickable(link);
     const invoice = await ui.clickOpensPopup(masterPage, invoiceLink, {
       context, recorder, label: 'bc-invoices', timeout: TIMEOUT,

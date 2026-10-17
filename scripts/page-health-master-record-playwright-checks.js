@@ -45,6 +45,16 @@ async function main() {
       preferredDemographicNo: process.env.MASTER_RECORD_DEMOGRAPHIC_NO || '2',
       timeout,
     });
+    const popupLinks = await masterPage.locator('.MainTableLeftColumn a[onclick]').evaluateAll(links => links.map(link => ({
+      href: link.getAttribute('href'), url: link.href, label: link.textContent.trim(),
+    })));
+    h.assert(popupLinks.length >= 8, 'The Master Record lost its clinical and billing popup links');
+    for (const link of popupLinks) {
+      h.assert(link.href && !/^(?:#|javascript:)/i.test(link.href),
+        `The Master Record popup link has no usable destination: ${link.label}`);
+      h.assert(new URL(link.url).origin === new URL(config.baseUrl).origin,
+        `The Master Record popup link points off host: ${link.label}`);
+    }
     await judgePage(session.ledger, session.probe, 'master-record (landing)', masterPage, {});
     const items = dedupe(await catalogueLinks(masterPage));
     h.assert(items.length > 0, 'The Master Record offered no navigable links at all');
