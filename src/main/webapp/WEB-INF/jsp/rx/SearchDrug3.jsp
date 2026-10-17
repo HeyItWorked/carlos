@@ -232,6 +232,7 @@ if (rx_enhance!=null && rx_enhance.equals("true")) {
         <%-- Tags every Rx request from this page with its patient (per-patient Rx state, #3875). --%>
         <script type="text/javascript" src="${ctx}/share/javascript/rx-patient-context.js" data-demographic-no="<%= rxSessionBean.getDemographicNo() %>"></script>
         <script src="${ctx}/share/javascript/allergy-alerts.js"></script>
+        <script src="${ctx}/share/javascript/rx-interaction-warnings.js"></script>
         <script type="text/javascript" src="${ctx}/share/javascript/Oscar.js"></script>
         <script type="text/javascript" src="${ctx}/js/checkDate.js"></script>
 
@@ -867,7 +868,7 @@ function renderRxStage() {
 
                                                 <div id="prescriptionStageSet" style="display:none">
 
-                                                    <div id="interactingDrugErrorMsg" style="display:none"></div>
+                                                    <div id="interactingDrugErrorMsg" role="status" style="display:none;color:#856404;font-weight:bold;"></div>
 
                                                     <div id="rxText"></div>
                                                         <%-- Prescriptions are staged here via the prescribe.jsp widget --%>
@@ -1212,6 +1213,7 @@ function renderRxStage() {
         <br/>
         <fmt:message key="oscarRx.discontinuedReason.msgComment"/><br/>
         <textarea id="disComment" rows="3" cols="45"></textarea><br/>
+        <p id="discontinueChanged" role="alert" hidden><fmt:message key="SearchDrug.discontinue.changed"/></p>
         <input type="button" onclick="document.getElementById('discontinueUI').style.display='none';" value="<fmt:message key="SearchDrug.discontinue.cancel"/>"/>
         <input type="button" onclick="Discontinue2(document.getElementById('disDrugId').value,document.getElementById('disReason').value,document.getElementById('disComment').value,document.getElementById('disDrug').textContent);" value="<fmt:message key="SearchDrug.discontinue.action"/>"/>
 
@@ -1529,8 +1531,6 @@ function renderRxStage() {
           requestHeaders: { 'Accept': 'application/json' },
           evalScripts:true,
 					insertion: 'bottom', onSuccess: function (data) {
-                // updateCurrentInteractions();
-
 						// detect postback or page load.
 						if (data.responseText) {
 							renderRxStage();
@@ -1635,7 +1635,6 @@ function renderRxStage() {
                   document.getElementById(del).style.textDecoration='line-through';
                   document.getElementById(discont).style.textDecoration='line-through';
                   document.getElementById(prescrip).style.textDecoration='line-through';
-		  // updateCurrentInteractions();
 							location.reload();
 
 						}
@@ -1644,9 +1643,9 @@ function renderRxStage() {
         return false;
     }
 
-   function checkAllergy(id,atcCode){
+   function checkAllergy(id,atcCode,din){
      const url = ctx + "/rx/showAllergy";
-     const data="method=allergyData&demographicNo=<%=demoNo%>&atcCode="+encodeURIComponent(atcCode)+"&id="+ encodeURIComponent(id) +"&rand="+ Math.floor(Math.random()*10001);
+     const data="method=allergyData&demographicNo=<%=demoNo%>&atcCode="+encodeURIComponent(atcCode)+"&din="+encodeURIComponent(din || '')+"&id="+ encodeURIComponent(id) +"&rand="+ Math.floor(Math.random()*10001);
      CarlosAllergyAlert.render(document, id, {pending: true});
      CarlosAjax.request(url, {method: 'post', postBody: data,
        requestHeaders: {'Accept': 'application/json'},
@@ -1727,6 +1726,7 @@ function renderRxStage() {
        document.getElementById('disDrug').textContent = drugName;
        document.getElementById('discontinueUI').style.display="";
        document.getElementById('disDrugId').value=id;
+       document.getElementById('discontinueChanged').hidden=true;
 
 
     }
@@ -1745,8 +1745,13 @@ function renderRxStage() {
                   document.getElementById('del_'+json.id).style.textDecoration='line-through';
                   document.getElementById('discont_'+json.id).textContent = json.reason;
                   document.getElementById('prescrip_'+json.id).style.textDecoration='line-through';
+                  // The discontinued drug no longer counts as a current medication.
+                  updateCurrentInteractions();
                     }, onFailure: function (transport) {
-                        if (transport && transport.responseJSON
+                        if (transport && transport.status === 409 && transport.responseJSON
+                                && transport.responseJSON.error === 'STALE_RX_DISCONTINUE') {
+                            document.getElementById('discontinueChanged').hidden=false;
+                        } else if (transport && transport.responseJSON
                                 && transport.responseJSON.error === 'INCOMPLETE_RX_DISCONTINUE') {
                             alert(jsMsg.discontinueIncomplete);
                         } else {
@@ -1923,14 +1928,35 @@ function popForm2(scriptId, saveAndPrint){
 
     refreshDrugProfile();
 
+    // Drug-drug interaction markers on the staged cards (#4506). Every way a card is staged or
+    // removed changes #rxText, so one observer re-checks after each of them; the check runs
+    // against the cards the server holds for this patient and their current medications.
+    var rxInteractionCheck = RxInteractionWarnings.create({
+        document: document,
+        url: ctx + '/rx/interactionWarnings?demographicNo=<%=demoNo%>',
+        fetch: window.fetch.bind(window),
+        setTimeout: window.setTimeout.bind(window),
+        clearTimeout: window.clearTimeout.bind(window)
+    });
+
+    function updateCurrentInteractions() {
+        rxInteractionCheck.schedule();
+    }
+
+    RxInteractionWarnings.watch(document.getElementById('rxText'), updateCurrentInteractions, window.MutationObserver);
+
 
 			function searchResultsHandler(type, args) {
 
 				var url = ctx + "/rx/WriteScript";
 				var ran_number = Math.round(Math.random() * 1000000);
+				// This page's own patient (the bean authorised for this request). The EL name
+				// demographicNo used here before resolved from session scope on routes that set no
+				// attribute of that name, i.e. to the patient of the last waiting-list, registry or
+				// allergy page in any window, and the drug was then staged for that patient (#4673).
 				var params = "parameterValue=createNewRx"
 					+ "&demographicNo="
-					+ "${ demographicNo }"
+					+ "<%= demoNo %>"
 					+ "&drugId="
 					+ encodeURIComponent(args.id)
 					+ "&text="
@@ -2303,9 +2329,7 @@ function represcribe(element, toArchive){
         var url= ctx + "/rx/rePrescribe2";
         data += "&method=represcribe2&rand="+Math.floor(Math.random()*10001);
         CarlosAjax.updater({success: 'rxText'}, url, {onFailure: reportRefusedRequest, method:'post',parameters:data,evalScripts:true,
-            insertion: 'bottom',onSuccess:function(transport){
-                // updateCurrentInteractions();
-            }});
+            insertion: 'bottom'});
 
    }
 }
@@ -2913,7 +2937,11 @@ function updateQty(element){
 		}
 		<%}%>
 		setPharmacyId();
-        var data=new URLSearchParams(new FormData(document.getElementById('drugForm'))).toString();
+        // The search box is not prescription data; submitting it again can trigger
+        // WAF signatures even though the staged drug's name has a prose exclusion.
+        var saveFields = new FormData(document.getElementById('drugForm'));
+        saveFields.delete('searchString');
+        var data=new URLSearchParams(saveFields).toString();
         var url= ctx + "/rx/WriteScript?parameterValue=updateSaveAllDrugs&rand="+ Math.floor(Math.random()*10001);
         CarlosAjax.request(url,
         {method: 'post',postBody:data,synchronous:true,
@@ -2949,7 +2977,11 @@ function updateQty(element){
 		}
 		<%}%>		
 		setPharmacyId();
-        var data=new URLSearchParams(new FormData(document.getElementById('drugForm'))).toString() + '&clearSaved=true';
+        // The search box is not prescription data; submitting it again can trigger
+        // WAF signatures even though the staged drug's name has a prose exclusion.
+        var saveFields = new FormData(document.getElementById('drugForm'));
+        saveFields.delete('searchString');
+        var data=new URLSearchParams(saveFields).toString() + '&clearSaved=true';
         var url= ctx + "/rx/WriteScript?parameterValue=updateSaveAllDrugs&rand="+ Math.floor(Math.random()*10001);
         CarlosAjax.request(url,
         {method: 'post',postBody:data,synchronous:true,
