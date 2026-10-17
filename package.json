@@ -699,7 +699,8 @@
     "test:hrm-tickler-playwright": "node scripts/hrm-tickler-playwright-checks.js",
     "test:rx-static-script-pickup-playwright": "node scripts/rx-static-script-pickup-playwright-checks.js",
     "test:rx-represcribe-long-term-playwright": "node scripts/rx-represcribe-long-term-playwright-checks.js",
-    "test:rx-custom-note-playwright": "node scripts/rx-custom-note-playwright-checks.js"
+    "test:rx-custom-note-playwright": "node scripts/rx-custom-note-playwright-checks.js",
+    "test:rx-profile-reorder-playwright": "node scripts/rx-profile-reorder-playwright-checks.js"
   },
   "dependencies": {
     "@docusaurus/core": "^3.9.2",
