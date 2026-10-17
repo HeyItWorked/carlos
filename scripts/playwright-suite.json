@@ -4933,6 +4933,54 @@
       "fixtures": "Owned patients in a 1951-1953 window, a provider group, one appointment, three billing headers and four notes; snapshots and restores the clinic-wide visitreport provider list and regenerates the reportagesex cache, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1)."
     },
     {
+      "name": "admin-cds-report",
+      "script": "scripts/admin-cds-mis-reports-playwright-checks.js",
+      "envSet": {
+        "CDS_MIS_REPORT": "cds"
+      },
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "mutates": [
+        "FunctionalCentre",
+        "program"
+      ],
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "env": [
+        "CDS_MIS_REPORT"
+      ],
+      "fixtures": "A FAKE functional centre and one FAKE Service program on it (inserted with SQL: the CAISI Program editor needs _pmm_management, which no role holds on a fresh install; the centre is the run's own because MIS by functional centre counts every program of the facility on it), the runWorkflow FAKE patient and three face-to-face notes on that patient in the program, one in the month reported and two in the month after; all are deleted by their captured ids. CDS 4 categories are read only. The centre and program show in the facility's lists while the run lasts, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1); a MySQL named lock also keeps two runs of this script apart.",
+      "notes": "Administration > Reports > CDS Report; one script backs admin-cds-report and admin-mis-report (CDS_MIS_REPORT picks the report), so each known failure has its own entry. Skips on the packaged default (caisi=off hides both report links). With caisi=on it fails at its first step: the CDS form loads its own jQuery over the administration page's, so its validate() call throws when the panel opens (pending finding 402; finding 40 records the same class for other Reports panels). Past that error its steps pass. No expectedFailure pin until the finding is in the log."
+    },
+    {
+      "name": "admin-mis-report",
+      "script": "scripts/admin-cds-mis-reports-playwright-checks.js",
+      "envSet": {
+        "CDS_MIS_REPORT": "mis"
+      },
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "mutates": [
+        "FunctionalCentre",
+        "program"
+      ],
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 300,
+      "env": [
+        "CDS_MIS_REPORT"
+      ],
+      "fixtures": "A FAKE functional centre and one FAKE Service program on it (inserted with SQL: the CAISI Program editor needs _pmm_management, which no role holds on a fresh install; the centre is the run's own because MIS by functional centre counts every program of the facility on it), the runWorkflow FAKE patient and three face-to-face notes on that patient in the program, one in the month reported and two in the month after; all are deleted by their captured ids. CDS 4 categories are read only. The centre and program show in the facility's lists while the run lasts, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1); a MySQL named lock also keeps two runs of this script apart.",
+      "notes": "Administration > Reports > MIS Report; see admin-cds-report for the shared script. Skips on the packaged default (caisi=off). With caisi=on it fails at its by-functional-centre step: the MIS form's months are numbered 1-12 but go to new GregorianCalendar(year, month, 1), which counts from 0, so every MIS report covers the month after the one chosen (pending finding 401). No expectedFailure pin until the finding is in the log."
+    },
+    {
       "name": "rx-delete-drug",
       "script": "scripts/rx-delete-drug-playwright-checks.js",
       "tiers": [
