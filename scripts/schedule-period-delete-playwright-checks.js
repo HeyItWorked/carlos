@@ -21,7 +21,6 @@
  */
 const h = require('./lib/playwright-harness');
 const ui = require('./lib/playwright-ui');
-const {revealAuditLink} = require('./lib/playwright-link-audit');
 const {bundleMessage, throwawayLoginFixture} = require('./lib/throwaway-login-fixture');
 const {runWorkflow} = require('./lib/workflow-session');
 
@@ -29,31 +28,11 @@ const TIMEOUT = 20000;
 const DELETE_CONFIRM = bundleMessage('schedule.scheduletemplateapplying.msgDeleteConfirmation',
   'Are you sure you want to delete this template setting?');
 
-/** Open a left-nav admin section through its .xlink into the shell's iframe. */
-async function openAdminSection(admin, relSuffix, readySelector) {
-  const link = admin.locator(`a.xlink[rel$="${relSuffix}"]`).first();
-  await revealAuditLink(admin, link, TIMEOUT);
-  const path = relSuffix.split('?')[0];
-  // Armed before the click: re-opening the same section must yield the NEW document.
-  const loaded = admin.waitForEvent('framenavigated', {
-    predicate: frame => frame !== admin.mainFrame() && new URL(frame.url()).pathname.endsWith(path), timeout: TIMEOUT,
-  });
-  loaded.catch(() => {});
-  await link.click({timeout: TIMEOUT});
-  const frame = await loaded;
-  await frame.waitForLoadState('domcontentloaded', {timeout: TIMEOUT}).catch(() => {});
-  await frame.locator(readySelector).first().waitFor({timeout: TIMEOUT});
-  await h.assertNotErrorPage(frame, relSuffix);
-  return frame;
-}
+const {openAdminSection, frameNavigation: navigateFrame} = require('./schedule-admin-settings-playwright-checks');
 
-/** Do something inside an admin iframe that navigates that iframe, and wait for it. */
+/** Do something inside an admin iframe that navigates that iframe, wait for it, and refuse an error page. */
 async function frameNavigation(admin, frame, action) {
-  const navigated = admin.waitForEvent('framenavigated', {predicate: candidate => candidate === frame, timeout: TIMEOUT});
-  navigated.catch(() => {});
-  await action();
-  await navigated;
-  await frame.waitForLoadState('domcontentloaded', {timeout: TIMEOUT}).catch(() => {});
+  await navigateFrame(admin, frame, action);
   await h.assertNotErrorPage(frame, 'the schedule setting frame');
 }
 

@@ -11929,7 +11929,10 @@
       ],
       "timeoutSec": 600,
       "env": [],
-      "fixtures": "Throwaway login (doctor plus an owned schedule-administrator role) with its own ProviderPreference and two owned day templates, seeded by SQL; two unused template code characters saved through Template Code Setting (the day sheet reads codes from ScheduleTemplateCodeDao's 30-minute cache, which only DAO writes evict); only the throwaway's own schedule is written (today and tomorrow). Cleanup removes the codes, the throwaway's templates, scheduledate, rschedule and ProviderPreference rows and the role, then the throwaway; the removed codes stay in that cache until the next code save or 30 minutes, which no check reads them through."
+      "mutates": [
+        "scheduletemplatecode"
+      ],
+      "fixtures": "Throwaway login (doctor plus an owned schedule-administrator role) with its own ProviderPreference and two owned day templates, seeded by SQL; two unused template code characters saved through Template Code Setting (the day sheet reads codes from ScheduleTemplateCodeDao's 30-minute cache, which only DAO writes evict); only the throwaway's own schedule is written (today and tomorrow). Cleanup removes the codes, the throwaway's templates, scheduledate, rschedule and ProviderPreference rows and the role, then the throwaway; the removed codes stay in that cache until the next code save or 30 minutes, which no check reads them through. Template codes are clinic-wide, and each code save evicts that shared cache for every login, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1)."
     },
     {
       "name": "consultation-appointment-time",
@@ -12046,7 +12049,7 @@
         "eform"
       ],
       "fixtures": "Owned FAKE- patient; two marker-named eForms in the clinic's eForm library (status 1), copies of them saved through the UI, and one saved copy of each seeded by SQL (eform_data). Cleanup deletes the eForms and every copy saved from them and asserts none remain. The eForm library is clinic-wide, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1).",
-      "notes": "Fails on develop. Step 1: the oscarOPEN button opens the internal /WEB-INF/jsp/eform/efmformadd_data.jsp path, a 404 (pending finding 304, #4773; release fix #4779). Step 2: the linked copy's save refuses the button's eform_link, which carries the opener's eForm id, so the opener never stores link$eform (pending finding 305, #4773; release fix #4779). Step 3: a saved opener's button never reads link$eform back (pending finding 303, #4764, fixed on release by #4770), and it also opens the internal path (297). All three parts run and print their outcome before the steps report them."
+      "notes": "Fails on develop. Step 1: the oscarOPEN button opens the internal /WEB-INF/jsp/eform/efmformadd_data.jsp path, a 404 (pending finding 304, #4773; release fix #4779). Step 2: the linked copy's save refuses the button's eform_link, which carries the opener's eForm id, so the opener never stores link$eform (pending finding 305, #4773; release fix #4779). Step 3: a saved opener's button never reads link$eform back (pending finding 303, #4764, fixed on release by #4770), and it also opens the internal path (304). All three parts run and print their outcome before the steps report them."
     },
     {
       "name": "eform-show-latest-only",
@@ -12073,7 +12076,7 @@
       ],
       "assertsDatabase": true,
       "provinces": [
-        "on"
+        "ON"
       ],
       "timeoutSec": 300,
       "env": [],
