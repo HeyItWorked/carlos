@@ -21,6 +21,7 @@ const h = require('./lib/playwright-harness');
 const { clickAndAwaitReload } = require('./lib/playwright-ui');
 const { runWorkflow, expectValue } = require('./lib/workflow-session');
 const { stageCustomDrug } = require('./rx-stash-patient-isolation-playwright-checks');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 const DRUGS = 2;
 const START_DATE = 5;
@@ -40,7 +41,7 @@ async function workflow(s) {
       + (SELECT COUNT(*) FROM prescription WHERE demographic_no=${patient})
       + (SELECT COUNT(*) FROM DigitalSignature WHERE demographicId=${patient})`) === '0', 'Owned Rx rows were not removed');
   });
-  const rx = await s.popup(s.master, s.master.locator('a[onclick*="/rx/choosePatient"]').first(), 'rx-module');
+  const rx = await s.popup(s.master, masterRecordLink(s.master, '/rx/choosePatient').first(), 'rx-module');
   h.assert(new URL(rx.url()).searchParams.get('demographicNo') === patient, 'The Rx module opened for another patient');
   await rx.locator('#searchString').waitFor({ state: 'visible' });
   await rx.waitForLoadState('networkidle');

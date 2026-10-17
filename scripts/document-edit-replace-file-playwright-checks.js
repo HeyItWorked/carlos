@@ -30,6 +30,7 @@ const {
   removeOwnedPdfDocuments, assertOwnedPdfDocumentsRemoved,
 } = require('./lib/stored-pdf-documents');
 const { observeStoredPreviewCapacity } = require('./lib/stored-preview-capacity-check');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 async function workflow(s) {
   const { sql, marker, patient, provider } = s;
@@ -54,7 +55,7 @@ async function workflow(s) {
   let report;
   let editor;
   await s.step('Master Record ▸ Documents ▸ Edit offers a File field for the owned document', async () => {
-    report = await s.popup(s.master, s.master.locator('a[onclick*="/documentManager/ViewDocumentReport"]').first(), 'edoc-report');
+    report = await s.popup(s.master, masterRecordLink(s.master, '/documentManager/ViewDocumentReport').first(), 'edoc-report');
     await report.locator(`#docNo${doc.id}`).waitFor({ state: 'attached' });
     const row = report.locator('tr', { has: report.locator(`#docNo${doc.id}`) });
     editor = await s.popup(report, row.locator('a[onclick*="/documentManager/ViewEditDocument"]'), 'edoc-edit');

@@ -16,6 +16,7 @@ const h = require('./lib/playwright-harness');
 const ui = require('./lib/playwright-ui');
 const { runWorkflow } = require('./lib/workflow-session');
 const { markDocumentResidue, removeDocumentResidue } = require('./lib/document-residue');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 const q = h.sqlString;
 const POSITIVE = /^[1-9]\d*$/;
@@ -157,7 +158,7 @@ async function workflow(s) {
     const stored = sql.value(`SELECT CONCAT(task_assigned_to,'|',creator,'|',status,'|',IF(service_date IS NULL,'no date','dated'))
       FROM tickler WHERE tickler_no=${written.tickler}`);
     h.assert(stored === `${provider}|${provider}|A|dated`, `The tickler was stored as ${stored} (assignee|creator|status|service date)`);
-    const list = await s.popup(s.master, s.master.locator('a[onclick*="/tickler/ViewTicklerMain"]').first(), 'patient-tickler-list');
+    const list = await s.popup(s.master, masterRecordLink(s.master, '/tickler/ViewTicklerMain').first(), 'patient-tickler-list');
     await list.getByText(ticklerText, { exact: false }).first().waitFor({ timeout: 20000 });
     await list.close();
   });

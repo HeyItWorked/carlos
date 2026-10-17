@@ -28,6 +28,7 @@
 const h = require('./lib/playwright-harness');
 const ui = require('./lib/playwright-ui');
 const { expectValue, runWorkflow } = require('./lib/workflow-session');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 const TIMEOUT = 30000;
 // The relation list is a table nested in a row of the page's layout table, so a relation's text is
@@ -50,7 +51,7 @@ async function workflow(s) {
       + (SELECT COUNT(*) FROM demographic WHERE last_name=${q(relativeName)})`) === '0', 'The owned relationship rows or the second patient remain');
   });
 
-  const addRelation = s.master.locator(`a[onclick*="/demographic/AddRelation?demo=${patient}"]`).first();
+  const addRelation = masterRecordLink(s.master, `/demographic/AddRelation?demo=${patient}`).first();
   if (await addRelation.count() === 0) {
     throw new h.SkipCheck('The Master Record has no Add Relation: it is shown only with the legacy contacts UI (NEW_CONTACTS_UI off)');
   }

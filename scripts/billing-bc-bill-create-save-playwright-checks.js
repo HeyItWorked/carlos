@@ -33,6 +33,7 @@ const h = require('./lib/playwright-harness');
 const ui = require('./lib/playwright-ui');
 const { expectValue, runWorkflow } = require('./lib/workflow-session');
 const bc = require('./lib/bc-billing-fixture');
+const { masterRecordLink } = require('./lib/master-record-link');
 
 const TIMEOUT = 30000;
 const FEE = '12.34';
@@ -102,7 +103,7 @@ async function workflow(s) {
 
   let form;
   await s.step('Create Invoice opens the BC bill form for the owned patient with the owned billing physician', async () => {
-    const link = s.master.locator('a[onclick*="/billing?billRegion="][onclick*="appointment_no=0&"]').first();
+    const link = masterRecordLink(s.master, '/billing?billRegion=', 'appointment_no=0&').first();
     h.assert(await link.count() === 1, 'The master record has no Create Invoice link');
     form = await s.popup(s.master, link, 'bc-bill-form');
     await form.waitForLoadState('domcontentloaded');

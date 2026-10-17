@@ -9,6 +9,7 @@
 const h = require('./playwright-harness');
 const { clickOpensPopupOrNavigates } = require('./playwright-ui');
 const { revealAuditLink } = require('./playwright-link-audit');
+const { masterRecordLink } = require('./master-record-link');
 
 /** Skip unless the database has the BC billing schema (billregion=BC installs). */
 function requireBcBillingSchema(sql) {
@@ -93,7 +94,7 @@ function seedOwnedBcBill(s, { billingtype = 'MSP', status = 'O', code = '00100',
 
 /** Open Bill Status from the master record's Invoice List link (Billing ▸ Invoice List), filtered to the owned patient. */
 async function openBillStatus(s, ui) {
-  const link = s.master.locator('a[onclick*="/billing/CA/BC/reprocessBill?"]').first();
+  const link = masterRecordLink(s.master, '/billing/CA/BC/reprocessBill?').first();
   h.assert(await link.count() === 1, 'The BC master record has no Invoice List link');
   // Click the visible words: on BC the inline eligibility menu widens the navigation cell under the
   // content pane, so the link's centre is covered (app-findings-log.md finding 146).
