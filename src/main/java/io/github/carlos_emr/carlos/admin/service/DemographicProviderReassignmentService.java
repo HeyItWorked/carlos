@@ -14,7 +14,11 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Atomic, scoped bulk care-team reassignment. */
+/**
+ * Atomic, scoped bulk care-team reassignment.
+ *
+ * @since 2026-10-17
+ */
 @Service
 public class DemographicProviderReassignmentService {
     private final DemographicManager demographics;

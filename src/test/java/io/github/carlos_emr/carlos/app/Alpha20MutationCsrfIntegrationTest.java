@@ -13,7 +13,11 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import static org.assertj.core.api.Assertions.*;
 
-/** Uses the shipped configuration and real CSRF validator/filter before the action boundary. */
+/**
+ * Uses the shipped configuration and real CSRF validator/filter before the action boundary.
+ *
+ * @since 2026-10-17
+ */
 @Tag("integration") @Tag("security")
 class Alpha20MutationCsrfIntegrationTest {
     @ParameterizedTest

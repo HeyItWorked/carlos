@@ -35,7 +35,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
-/** Proves Spring wires the required security constructor and the legacy DAO dependencies together. */
+/**
+ * Proves Spring wires the required security constructor and the legacy DAO dependencies together.
+ *
+ * @since 2026-10-17
+ */
 @Tag("unit")
 @Tag("email")
 class EmailComposeManagerWiringUnitTest {

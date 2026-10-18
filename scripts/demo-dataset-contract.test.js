@@ -782,6 +782,10 @@ for (const province of ['on', 'bc']) {
         // Valid inbox routes remain; the repair must not discard the whole routing table.
         assert.ok(insertedRows(sql, 'patientLabRouting', ['demographic_no', 'lab_no', 'lab_type', 'id'])
           .some(row => row.lab_type === 'DOC' && row.lab_no === '3'));
+        // Without this the orphan check could pass vacuously if the hard-coded column list drifted from the INSERT.
+        assert.ok(insertedRows(sql, 'providerLabRouting', ['provider_no', 'lab_no', 'status', 'comment', 'timestamp', 'lab_type', 'id'])
+          .some(row => row.lab_type === 'DOC' && row.lab_no === '3'),
+          `${province}: providerLabRouting must keep its valid document inbox route`);
       }
     });
 }

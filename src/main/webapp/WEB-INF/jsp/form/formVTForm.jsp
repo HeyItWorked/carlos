@@ -1297,7 +1297,7 @@
                                                     </a></td>
                                                     <td class="dataEntryTable" align="center">
                                                         <input id="vt-WHRB-comments" aria-labelledby="vt-WHRB-label vt-comments-label" type="text" name="value(WHRBComments)" size="30%" /></td>
-                                                    </tr-->
+                                                    </tr>
 
 
                                                 <tr>

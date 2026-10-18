@@ -40,11 +40,18 @@ async function startGateway({ socket, baseURL, model, key, fetcher = fetch }) {
         'temperature', 'top_p', 'stop', 'frequency_penalty', 'presence_penalty', 'response_format', 'seed']) {
         if (body[name] !== undefined) payload[name] = body[name];
       }
+      // fetch keeps its signal bound to the response body, so a single 120 s timeout would also cut a long
+      // streamed completion off mid-answer. Bound only the wait for the response headers with 120 s, then give
+      // the body its own longer limit, and stop the provider call if the client goes away.
+      const controller = new AbortController();
+      const headerTimer = setTimeout(() => controller.abort(), 120000);
+      const bodyTimer = setTimeout(() => controller.abort(), 600000);
+      res.on('close', () => { clearTimeout(headerTimer); clearTimeout(bodyTimer); controller.abort(); });
       const response = await fetcher(upstream.href, {
-        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(120000),
+        method: 'POST', redirect: 'error', signal: controller.signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify(payload),
-      });
+      }).finally(() => clearTimeout(headerTimer));
       if (!response.ok || !response.body) {
         await response.body?.cancel();
         return reject(res, response.status >= 400 && response.status < 600 ? response.status : 502,

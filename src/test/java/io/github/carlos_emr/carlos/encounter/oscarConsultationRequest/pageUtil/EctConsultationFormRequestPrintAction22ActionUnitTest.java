@@ -298,13 +298,19 @@ class EctConsultationFormRequestPrintAction22ActionUnitTest extends CarlosUnitTe
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    @DisplayName("should refuse a rendered attachment outside the application temp, directly or through a symlink")
     void shouldRefuseRenderedAttachmentOutsideApplicationTemp_withDirectPathOrSymlink(boolean symlink) throws Exception {
         Path foreign = Files.createTempFile("not-carlos-owned-", ".pdf");
         Path rendered = symlink ? createRenderedPdf() : foreign;
         try {
             if (symlink) {
                 Files.delete(rendered);
-                Files.createSymbolicLink(rendered, foreign);
+                try {
+                    Files.createSymbolicLink(rendered, foreign);
+                } catch (UnsupportedOperationException | java.io.IOException unavailable) {
+                    // Windows without the privilege, or a filesystem without symlinks: the direct case still runs.
+                    org.junit.jupiter.api.Assumptions.assumeTrue(false, "symbolic links are not available here");
+                }
             }
             EFormData eForm = mock(EFormData.class);
             when(eForm.getId()).thenReturn(7);

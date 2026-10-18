@@ -172,7 +172,6 @@ class BillingOnSave2ActionUnitTest extends CarlosUnitTestBase {
         when(mockSaveService.saveBillingWithExtAndPayee(any(BillingClaimSubmissionService.BillingClaimSubmission.class),
                 any(), anyString(), any())).thenReturn(new BillingClaimSubmissionService.SaveResult(true, 4321));
         when(mockSaveService.getApptStatus("880")).thenReturn("t");
-        when(mockSaveService.updateApptStatus(eq("880"), any(), eq("999998"))).thenReturn(true);
         when(mockSaveService.updateApptStatus(eq("880"), any(), eq("999998")))
                 .thenThrow(new IllegalStateException("Synthetic appointment write failure")).thenReturn(true);
 
