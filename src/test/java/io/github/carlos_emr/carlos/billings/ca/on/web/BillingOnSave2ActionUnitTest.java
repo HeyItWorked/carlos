@@ -318,6 +318,35 @@ class BillingOnSave2ActionUnitTest extends CarlosUnitTestBase {
     }
 
     @Test
+    @DisplayName("a new bill saves when the form posts its old-bill fields empty, as billingON.jsp does")
+    void shouldSaveNewBill_whenOldBillFieldsPostEmpty() {
+        mockRequest.setParameter("appointment_no", "");
+        mockRequest.setParameter("url_back", "");
+        mockRequest.setParameter("billingAction", "SAVE");
+        mockRequest.setParameter("xml_billtype", "PAT");
+        mockRequest.setParameter("payeename", "Acme Payee");
+        mockRequest.setParameter("billNo_old", "");
+        mockRequest.setParameter("billStatus_old", "");
+        mockRequest.setParameter("curBillForm", "ON");
+
+        BillingClaimSubmissionService.BillingClaimSubmission submission =
+                new BillingClaimSubmissionService.BillingClaimSubmission(
+                        new io.github.carlos_emr.carlos.billings.ca.on.dto.BillingClaimHeaderDto(),
+                        java.util.List.of());
+        when(mockSaveService.getSubmission(mockRequest)).thenReturn(submission);
+        when(mockSaveService.saveBillingWithExtAndPayee(any(BillingClaimSubmissionService.BillingClaimSubmission.class),
+                eq(mockRequest), eq("PAT"), eq("Acme Payee")))
+                .thenReturn(new BillingClaimSubmissionService.SaveResult(true, 4321));
+        when(mockUserPropertyDao.getProp("999998", UserProperty.WORKLOAD_MANAGEMENT)).thenReturn(null);
+
+        String result = newAction().execute();
+
+        assertThat(result).isEqualTo(ActionSupport.SUCCESS);
+        assertThat(mockRequest.getAttribute("billingNo")).isEqualTo(4321);
+        assertThat(mockRequest.getAttribute("billingFailureReason")).isNull();
+    }
+
+    @Test
     void shouldReturnFailure_whenServiceRollsBack() {
         // Service throws BillingValidationException → action treats save as
         // failed and returns "failure" with billingFailed flag set so the JSP
