@@ -197,6 +197,7 @@ public class BillingFormData {
     }
 
     /** Use a configured form when available, otherwise the first form offered by the selector. */
+    @SuppressFBWarnings(value = "IMPROPER_UNICODE", justification = "ASCII billing form identifiers; not an authorization decision")
     public String resolveBillingForm(String preferred) {
         BillingForm[] available = getFormList();
         for (BillingForm form : available) {

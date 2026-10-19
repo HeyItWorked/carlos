@@ -71,7 +71,7 @@ async function workflow(s) {
   // The list names a row by its measurement type, not its display name; the three types are distinct.
   const row = level => customList.locator('tbody tr')
     .filter({has: page.getByText(items[level].type, {exact: true})})
-    .filter({has: page.locator('td:nth-child(2)').filter({hasText: /^add\b/})});
+    .filter({has: page.locator('td:nth-child(2)').filter({hasText: /^\s*add\b/})});
   const expectLocked = async (level, createdAt, where) => {
     const r = row(level);
     h.assert(await r.count() === 1, `${where}: the Custom List does not show the ${level} item exactly once`);

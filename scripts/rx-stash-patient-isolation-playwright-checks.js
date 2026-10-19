@@ -171,13 +171,27 @@ async function workflow(session) {
   await session.step('closing one staged drug saves only the other', async () => {
     const rx = await openRx(session, patient);
     const closed = await stageCustomDrug(rx, `${marker}-A`);
-    await stageCustomDrug(rx, `${marker}-B`);
+    const retained = await stageCustomDrug(rx, `${marker}-B`);
+    // Short valid directions previously triggered a substring exception while deriving dosage.
+    // Exercise the real parser and save, and retain the clinician's exact text.
+    await rx.locator(`#instructions_${retained}`).fill('1 od');
+    const [parsed] = await Promise.all([
+      rx.waitForResponse(response => response.request().method() === 'POST'
+        && new URL(response.url()).pathname.endsWith('/rx/UpdateScript')
+        && new URLSearchParams(response.request().postData() || '').get('randomId') === retained
+        && new URLSearchParams(response.request().postData() || '').get('instruction') === '1 od'),
+      rx.locator(`label[for="jsonDxSearch_${retained}"]`).click(),
+    ]);
+    h.assert(parsed.status() === 200, 'Short valid directions were refused by the instruction parser');
     // The X on the card, as the prescriber clicks it.
     await rx.locator(`#set_${closed} a[onclick^='removePrescribingDrug']`).first().click();
     await rx.locator(`#drugName_${closed}`).waitFor({ state: 'detached', timeout: 10000 });
     await saveOnly(rx);
     await expectValue(sql, `SELECT COUNT(*) FROM drugs WHERE demographic_no=${patient}
       AND customName=${h.sqlString(`${marker}-B`)}`, '1', 'the drug left on the pad was not saved');
+    h.assert(sql.value(`SELECT special FROM drugs WHERE demographic_no=${patient}
+      AND customName=${h.sqlString(`${marker}-B`)}`) === '1 od',
+    'Saving the retained medication changed its short directions');
     h.assert(!drugsFor(sql, patient, marker).some(([name]) => name === `${marker}-A`),
       'the drug closed with its X was saved anyway');
     await rx.close();
