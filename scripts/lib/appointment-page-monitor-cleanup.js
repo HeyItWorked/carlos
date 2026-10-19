@@ -33,7 +33,7 @@ function appointmentMonitorCleanup({ sql, provider, date, baseUrl }) {
   }) : [];
   return {
     async remember(context) {
-      const cookie = (await context.cookies(baseUrl)).filter(item => item.name === 'JSESSIONID')
+      const cookie = (await context.cookies(String(baseUrl))).filter(item => item.name === 'JSESSIONID')
         .sort((left, right) => (right.path || '').length - (left.path || '').length)[0];
       if (!cookie?.value) throw new Error('Cannot establish the appointment fixture session for lock cleanup');
       // Keep only the hash: neither subprocess arguments nor diagnostic errors expose a session cookie.

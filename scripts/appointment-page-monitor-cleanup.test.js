@@ -85,3 +85,10 @@ test('a sole cleanup failure retains the original error and successful cleanup s
   assert.throws(()=>finishAppointmentCleanup(()=>{throw original;},()=>{cleaned=true;}),error=>error===original);
   assert.equal(cleaned,true);
 });
+
+test("the shared validator URL object is normalized to Playwright's string cookie API", async () => {
+  let actual;
+  const cleanup=appointmentMonitorCleanup({sql:()=>'',provider:'999998',date:'2027-11-23',baseUrl:new URL('https://127.0.0.1/carlos')});
+  await cleanup.remember({cookies:async url=>{actual=url;assert.equal(typeof url,'string');return[{name:'JSESSIONID',value:'owned',path:'/carlos'}];}});
+  assert.equal(actual,'https://127.0.0.1/carlos');assert.equal(cleanup.cleanup(),0);
+});
