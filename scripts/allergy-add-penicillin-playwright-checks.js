@@ -236,10 +236,10 @@ function journalActionErrors(unit, since, { run = spawnSync } = {}) {
   assert(since && typeof since.getTime === 'function' && Number.isFinite(since.getTime()),
     'The server journal window must start at a valid date');
   const stamp = since.toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
-  function read(extra) {
+  function read(extra, allowNoEntries = false) {
     let result;
     try {
-      result = run('journalctl', ['-u', unit, '--no-pager', '--all', '--quiet', '-o', 'json', ...extra],
+      result = run('journalctl', ['-u', unit, '--no-pager', '--all', '-o', 'json', ...extra],
         { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (_) {
       throw new Error('Could not read the actual server journal');
@@ -249,6 +249,7 @@ function journalActionErrors(unit, since, { run = spawnSync } = {}) {
     assert(result && result.status === 0 && !result.error && !result.signal
       && typeof result.stdout === 'string' && !String(result.stderr || '').trim(),
     'Could not read the actual server journal without access errors');
+    if (allowNoEntries && result.stdout.trim() === '-- No entries --') return [];
     const entries = [];
     for (const line of result.stdout.split('\n').filter((value) => value.trim())) {
       let entry;
@@ -267,7 +268,7 @@ function journalActionErrors(unit, since, { run = spawnSync } = {}) {
   // the actual unit has a readable entry, so a missing/inaccessible journal
   // cannot masquerade as a clean empty interval.
   assert(read(['-n', '1']).length > 0, 'The actual server unit has no readable journal history');
-  return read(['--since', stamp]).filter(({ MESSAGE }) => /\bERROR\b/.test(MESSAGE)
+  return read(['--since', stamp], true).filter(({ MESSAGE }) => /\bERROR\b/.test(MESSAGE)
     && MESSAGE.includes('RxAddAllergy2Action')).length;
 }
 

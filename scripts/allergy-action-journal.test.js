@@ -51,8 +51,30 @@ test('quiet action window passes only after a readable historical entry from the
     assert.equal(call.command, 'journalctl');
     assert.deepEqual(call.args.slice(0, 2), ['-u', UNIT]);
     assert(call.args.includes('json'));
+    assert.equal(call.args.includes('--quiet'), false, 'Access warnings must remain visible');
     assert.equal(call.options.timeout, 30000);
     assert.deepEqual(call.options.stdio, ['ignore', 'pipe', 'pipe']);
+  }
+});
+
+test('exact no-entries sentinel is accepted only for the interval after actual history proof', () => {
+  const h = harness([success([entry()]), {status:0,stdout:'-- No entries --\n',stderr:''}]);
+  assert.equal(journalActionErrors(UNIT, SINCE, h), 0);
+});
+
+test('no-entries sentinel cannot establish readable historical unit evidence', () => {
+  const h = harness([{status:0,stdout:'-- No entries --\n',stderr:''}]);
+  assert.throws(() => journalActionErrors(UNIT, SINCE, h), /invalid structured evidence/);
+  assert.equal(h.calls.length, 1);
+});
+
+test('sentinel mixed with another line or any access warning remains a failure', () => {
+  for (const interval of [
+    {status:0,stdout:'-- No entries --\n'+JSON.stringify(entry('ERROR RxAddAllergy2Action failed')),stderr:''},
+    {status:0,stdout:'-- No entries --\n',stderr:'not seeing private unit records'},
+  ]) {
+    const h = harness([success([entry()]), interval]);
+    assert.throws(() => journalActionErrors(UNIT, SINCE, h), /journal/i);
   }
 });
 
