@@ -60,6 +60,7 @@
 
 const { chromium } = require('playwright');
 const { shouldIgnoreHttpsErrors } = require('./lib/playwright-harness');
+const { appointmentMonitorCleanup, finishAppointmentCleanup } = require('./lib/appointment-page-monitor-cleanup');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -112,6 +113,7 @@ const targetMonth = target.getUTCMonth() + 1;
 const targetDay = target.getUTCDate();
 const targetDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
 
+const monitorCleanup = appointmentMonitorCleanup({ sql, provider: providerNo, date: targetDate, baseUrl: config.baseUrl });
 const recorder = createRecorder();
 const passed = [];
 
@@ -185,8 +187,13 @@ function stampedArchiveRows() {
 
 function cleanupRows() {
   const like = escapeSql(`${stamp}%`);
-  sql(`DELETE FROM appointmentArchive WHERE reason LIKE '${like}' OR notes LIKE '${like}'`);
-  sql(`DELETE FROM appointment WHERE reason LIKE '${like}' OR notes LIKE '${like}'`);
+  finishAppointmentCleanup(() => {
+    sql(`DELETE FROM appointmentArchive WHERE reason LIKE '${like}' OR notes LIKE '${like}'`);
+    sql(`DELETE FROM appointment WHERE reason LIKE '${like}' OR notes LIKE '${like}'`);
+  }, () => {
+    const removed = monitorCleanup.cleanup();
+    if (removed) console.log(`cleanup appointment booking locks: ${removed} owned row(s)`);
+  });
 }
 
 async function waitFor(probe, description, timeoutMs = 30000) {
@@ -272,6 +279,7 @@ async function checkInvalidDuration(popup, button, label) {
 
 /** Books the appointment this check then operates on, from an empty slot link. */
 async function bookFromSlot(context, daySheet) {
+  await monitorCleanup.remember(context);
   // Scoped to the target provider's COLUMN, not just the first slot on the sheet.
   // appointmentprovideradminday.jsp builds its columns from the logged-in provider's
   // group (curProvider_no) and only falls back to the logged-in provider alone when
