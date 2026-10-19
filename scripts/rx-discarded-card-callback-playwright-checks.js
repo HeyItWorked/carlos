@@ -93,8 +93,9 @@ async function workflow(s) {
       const errors = splitLogEvents(log.since(logMark))
         .filter(event => /^(ERROR|FATAL)$/.test(event.level) && /RxWriteScript2Action/.test(event.text)
           && /NullPointerException/.test(event.text));
-      h.assert([200, 204, 400, 404, 409].includes(response.status()) && errors.length === 0,
+      h.assert(response.status() === 409 && errors.length === 0,
         `The discarded ${mode} callback answered HTTP ${response.status()} and logged ${errors.length} NullPointerException event(s)`);
+      console.log(`    discarded ${mode} callback receipt: HTTP 409; no revived draft; clinical rows and control medication unchanged; no server exception`);
     });
   } finally {
     release();
