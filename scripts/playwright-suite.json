@@ -12511,8 +12511,23 @@
         "DOCUMENT_DIR",
         "RX_FAX_DOCUMENT_DIR"
       ],
-      "fixtures": "Owned synthetic patient with three active ticklers due today and one PDF document (row, ctl_document link and file) so the document viewer offers the patient tickler list; all removed and asserted gone. SKIPs without DOCUMENT_DIR.",
-      "notes": "Patient tickler list (tickler/ViewTicklerDemoMain) Delete and Complete through tickler/DbTicklerDemoMain, the Active/Completed/Deleted views and the buttons each offers, and GET and tokenless POST refusals. Erase Completely is listed but not pressed."
+      "fixtures": "Owned synthetic patient with three active ticklers due today, a comment, legacy link, active and detached attachment associations, and one PDF document (row, ctl_document link and file) so the document viewer offers the patient tickler list; all removed and asserted gone. SKIPs without DOCUMENT_DIR.",
+      "notes": "Patient tickler list (tickler/ViewTicklerDemoMain) Delete and Complete through tickler/DbTicklerDemoMain, the Active/Completed/Deleted views and the buttons each offers, and GET and tokenless POST refusals. Deleted has no erase action. Delete and a legacy Erase Completely submission retain the task, comments, links, attachments and tickler_update history (#4993)."
+    },
+    {
+      "name": "tickler-main-list-lifecycle",
+      "script": "scripts/tickler-main-list-lifecycle-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "all"
+      ],
+      "timeoutSec": 240,
+      "env": [],
+      "fixtures": "Owned synthetic patient with four ticklers carrying the run marker; every tickler, comment, link, attachment and tickler_update row is removed and asserted gone.",
+      "notes": "Provider-wide task list (tickler/ViewTicklerMain) status lifecycle, issue #4993: the footer follows the status filter in place (Deleted has no Complete, Delete or erase action, and Active gets Complete and Delete back); a popup edit that reactivates a Completed task refreshes the opener through the carlos_tickler_refresh_all channel without Create Report; a legacy Erase Completely submission retains the task and tickler_update history and leaves an unticked deleted task alone."
     },
     {
       "name": "admin-login-agreement-upload",
@@ -13834,11 +13849,7 @@
       "env": [
         "TICKLER_BULK_ONLY"
       ],
-      "notes": "Task-list Check All / Clear All, selected-only Complete/Delete, Completed-to-Active through the row pencil and opener refresh, and Deleted action availability. Four owned tasks include a hidden control. Confirmed on packaged release/2026.08 at a7611d07b4a (Ubuntu 26.04); finding 292.",
-      "expectedFailure": {
-        "finding": 292,
-        "step": "the Completed row pencil reactivates one task and refreshes the opener"
-      }
+      "notes": "Task-list Check All / Clear All, selected-only Complete/Delete, Completed-to-Active through the row pencil and automatic opener refresh, and no erase, Complete or Delete actions in Deleted. Four owned tasks include a hidden control. Regression coverage for #4993; packaged validation remains pending for this revision."
     },
     {
       "name": "rh-workflow-queue-lifecycle",
@@ -13904,13 +13915,9 @@
       "env": [
         "TICKLER_BULK_ONLY"
       ],
-      "notes": "Bulk task states and Deleted action buttons after an explicit Create Report refresh. Runs independently of the automatic-opener-refresh assertion so one defect does not hide later task operations. Confirmed on packaged release/2026.08 at a7611d07b4a (Ubuntu 26.04); finding 289.",
+      "notes": "Bulk task states and Deleted action buttons after an explicit Create Report refresh. Runs independently of the automatic-opener-refresh assertion. Deleted has no erase, Complete or Delete action (#4993); packaged validation remains pending for this revision.",
       "envSet": {
         "TICKLER_BULK_ONLY": "state-actions"
-      },
-      "expectedFailure": {
-        "finding": 289,
-        "step": "the Deleted filter offers Erase Completely and hides Complete and Delete"
       }
     },
     {
@@ -14113,11 +14120,7 @@
         "RX_FAX_DOCUMENT_DIR"
       ],
       "fixtures": "Owned synthetic patient, three tasks and one PDF document/file; cleanup removes and verifies tasks, their history/links, the document and chart support rows.",
-      "notes": "E-Chart > document > open ticklers > Deleted > Erase Completely: empty selection changes nothing; selected task disappears while deleted/active controls remain; retention of audit data is permitted. Confirmed on packaged release/2026.08 at a7611d07b4a (Ubuntu 26.04); finding 296.",
-      "expectedFailure": {
-        "finding": 296,
-        "step": "Erase Completely removes only the checked task from Deleted and preserves unchecked tasks"
-      }
+      "notes": "E-Chart > document > open ticklers > Deleted: no erase control; legacy Erase Completely submissions with empty or selected tasks retain every task and its existing history, preserving deleted and active controls (#4993). Packaged validation remains pending for this revision."
     },
     {
       "name": "patient-letter-template-delete",
