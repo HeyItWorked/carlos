@@ -16,9 +16,9 @@
  *   - the simulation lists the owned WCB claim, and its invoice link opens that claim's correction page;
  *   - Settle Bill on the correction page comes back to it, and the claim is settled (status S, one history row);
  *   - LAST: Select Forms removes BC-WCB again, and every encounterForm row is as the check found it.
- * Fixtures: the owned FAKE- patient made a BC patient; one billing physician made BEFORE login, because the
- * simulation lists the cached active providers and that cache fills at login (a fresh Tomcat per run, as the live
- * wrapper starts); one open WCB claim for them (billing, billingmaster and a wcb row for fee item 19937). BC-WCB is
+ * Fixtures: the owned FAKE- patient made a BC patient; one billing physician saved through Administration before
+ * the simulation, so its active-provider cache sees the owned physician even on a warm install; one open WCB claim
+ * for them (billing, billingmaster and a wcb row for fee item 19937). BC-WCB is
  * shown on the clinic's form list while the check runs, and the physician shows in clinic-wide lists, so the check
  * must not run concurrently with other checks (live wrapper: EXCLUSIVE=1). Cleanup puts the recorded display order
  * back, deletes the patient's wcb rows, the claim's history rows, billingmaster and billing rows, and the physician,
@@ -29,6 +29,7 @@ const h = require('./lib/playwright-harness');
 const ui = require('./lib/playwright-ui');
 const bc = require('./lib/bc-billing-fixture');
 const { runWorkflow } = require('./lib/workflow-session');
+const { withProviderCleanup } = require('./billing-bc-simulation-encoding-playwright-checks');
 
 const TIMEOUT = 30000;
 const WCB_FORM = 'BC-WCB';
@@ -158,6 +159,39 @@ function seedWcbClaim(s, phn) {
 }
 
 async function workflow(s) {
+  const { sql } = s;
+  const q = h.sqlString;
+  s.cleanup(() => {
+    const owned = `provider_no=${q(physician.providerNo)}`;
+    h.assert(sql.value(`SELECT COUNT(*) FROM provider WHERE ${owned} AND last_name=${q(physician.marker)}`) === '1',
+      'Billing physician ownership changed');
+    for (const table of ['program_provider', 'provider_facility', 'secUserRole', 'providersite']) {
+      sql.execute(`DELETE FROM ${table} WHERE ${owned}`);
+    }
+    sql.execute(`DELETE FROM provider WHERE ${owned} AND last_name=${q(physician.marker)}`);
+    h.assert(sql.value(`SELECT COUNT(*) FROM provider WHERE ${owned}`) === '0', 'The owned billing physician was not removed');
+  });
+  const admin = await s.context.newPage();
+  async function saveStatus(active) {
+    await h.gotoApp(admin, s.config.baseUrl, `/admin/ViewProviderUpdateProvider?keyword=${encodeURIComponent(physician.providerNo)}`);
+    const form = admin.locator('form[name="updatearecord"]');
+    await form.locator(active ? '#statusActive' : '#statusInactive').check();
+    await Promise.all([
+      admin.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: TIMEOUT }),
+      form.locator('input[type="submit"][name="subbutton"]').click(),
+    ]);
+    h.assert(sql.value(`SELECT status FROM provider WHERE provider_no=${q(physician.providerNo)}`) === (active ? '1' : '0'),
+      'The owned billing physician was not saved through Administration');
+  }
+  // Only an application-side provider save evicts the cached provider list. A direct SQL
+  // fixture was invisible after earlier checks warmed it, and its deletion left a ghost.
+  return withProviderCleanup(async () => {
+    await saveStatus(true);
+    await runScenario(s);
+  }, () => saveStatus(false), () => admin.close());
+}
+
+async function runScenario(s) {
   const { sql, patient } = s;
   const q = h.sqlString;
   h.assert(physician, 'The billing physician was not made before login');
@@ -170,11 +204,6 @@ async function workflow(s) {
         WHERE form_name=${q(name)} AND form_value=${q(value)} AND hidden<>${Number(hidden)}`);
     }
     h.assert(JSON.stringify(encounterForms(sql)) === JSON.stringify(before), 'The encounter form list is not as the check found it');
-  });
-  s.cleanup(() => {
-    sql.execute(`DELETE FROM provider WHERE provider_no=${q(physician.providerNo)} AND last_name=${q(physician.marker)}`);
-    h.assert(sql.value(`SELECT COUNT(*) FROM provider WHERE provider_no=${q(physician.providerNo)}`) === '0',
-      'The owned billing physician was not removed');
   });
   let claim = null;
   s.cleanup(() => {
