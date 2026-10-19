@@ -56,7 +56,7 @@ class PreventionDataExtensionLookupUnitTest extends CarlosUnitTestBase {
     void shouldReturnLinkedInjectionFields_withoutParsingOrLoggingClinicalEntityText() {
         Prevention injection = injection(41);
         when(extensionDao.findByKeyAndValue("workflowId", "17")).thenReturn(List.of(link(41)));
-        when(preventionDao.find(41)).thenReturn(injection);
+        when(preventionDao.find(Integer.valueOf(41))).thenReturn(injection);
         when(extensionDao.findByPreventionId(41)).thenReturn(List.of(
                 field(41, "lot", CLINICAL_MARKER), field(41, "dose", "300"),
                 field(41, "reason", "antepartum"), field(41, "name", "synthetic product")));
@@ -77,7 +77,7 @@ class PreventionDataExtensionLookupUnitTest extends CarlosUnitTestBase {
             assertThat(logs.events()).noneMatch(event -> event.getLevel().isMoreSpecificThan(Level.WARN));
             assertThat(logs.messages()).noneMatch(message -> message.contains(CLINICAL_MARKER));
         }
-        verify(preventionDao, times(1)).find(41);
+        verify(preventionDao, times(1)).find(Integer.valueOf(41));
     }
 
     @Test
@@ -86,8 +86,8 @@ class PreventionDataExtensionLookupUnitTest extends CarlosUnitTestBase {
                 .thenReturn(List.of(link(null), link(40), link(41), link(42)));
         Prevention deleted = injection(41);
         deleted.setDeleted(true);
-        when(preventionDao.find(41)).thenReturn(deleted);
-        when(preventionDao.find(42)).thenReturn(injection(42));
+        when(preventionDao.find(Integer.valueOf(41))).thenReturn(deleted);
+        when(preventionDao.find(Integer.valueOf(42))).thenReturn(injection(42));
 
         try (MockedStatic<ProviderData> providers = mockStatic(ProviderData.class);
                 LogCapture logs = LogCapture.forLogger(PreventionData.class)) {

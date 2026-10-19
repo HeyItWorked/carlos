@@ -2073,26 +2073,40 @@ public final class RxWriteScript2Action extends ActionSupport {
 
     /** A corrected save and the rows it replaces must commit together, including the staged identities. */
     private String persistCorrection(LoggedInInfo loggedInInfo, RxSessionBean bean) {
-        record PreviousIdentity(RxPrescriptionData.Prescription card, int drugId, String scriptNo) {
+        record PreviousIdentity(RxPrescriptionData.Prescription card, int drugId, String scriptNo, String revision) {
             void restore() {
-                card.restoreSavedIdentity(drugId, scriptNo);
+                card.restoreSavedIdentity(drugId, scriptNo, revision);
             }
         }
         List<PreviousIdentity> previous = Arrays.stream(bean.getStash())
-                .map(card -> new PreviousIdentity(card, card.getDrugId(), card.getScript_no())).toList();
+                .map(card -> new PreviousIdentity(card, card.getDrugId(), card.getScript_no(), card.getDraftRevision())).toList();
         HashMap previousPairs = new HashMap(bean.getRandomIdDrugIdPair());
         var previousReRx = new java.util.concurrent.CopyOnWriteArrayList<>(bean.getReRxDrugIdList());
+        var completion = new java.util.concurrent.atomic.AtomicInteger(
+                org.springframework.transaction.support.TransactionSynchronization.STATUS_UNKNOWN);
         try {
             var transaction = new org.springframework.transaction.support.TransactionTemplate(
                     SpringUtils.getBean(org.springframework.transaction.PlatformTransactionManager.class));
             transaction.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-            return transaction.execute(status -> persistStashLocked(loggedInInfo, bean));
+            return transaction.execute(status -> {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                        new org.springframework.transaction.support.TransactionSynchronization() {
+                            @Override
+                            public void afterCompletion(int outcome) {
+                                completion.set(outcome);
+                            }
+                        });
+                return persistStashLocked(loggedInInfo, bean);
+            });
         } catch (RuntimeException e) {
-            // JPA rolls back the rows, but the session objects are outside its persistence context.
-            // Keep the previous IDs so a retry still archives the row being corrected, never a rolled-back ID.
-            previous.forEach(PreviousIdentity::restore);
-            bean.setRandomIdDrugIdPair(previousPairs);
-            bean.setReRxDrugIdList(previousReRx);
+            if (completion.get() == org.springframework.transaction.support.TransactionSynchronization.STATUS_ROLLED_BACK) {
+                // Only a confirmed rollback makes the old rendered version safe to retry. JPA does not
+                // restore these session objects, so restore their IDs and revisions along with its rows.
+                previous.forEach(PreviousIdentity::restore);
+                bean.setRandomIdDrugIdPair(previousPairs);
+                bean.setReRxDrugIdList(previousReRx);
+            }
+            // An uncertain commit keeps the consumed revision: the chart must be reviewed before retrying.
             request.removeAttribute("scriptId");
             throw e;
         }

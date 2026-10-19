@@ -120,6 +120,8 @@ class RxCorrectionSaveRollbackIntegrationTest extends CarlosUnitTestBase {
             servlet.when(ServletActionContext::getRequest).thenReturn(request);
             servlet.when(ServletActionContext::getResponse).thenReturn(response);
             var action = new RxWriteScript2Action(mock(PrescriptionSignatureStampService.class));
+            String firstRevision = firstCard.getDraftRevision();
+            String secondRevision = secondCard.getDraftRevision();
 
             assertThatThrownBy(() -> action.persistStash(info, bean))
                     .isInstanceOf(RxWriteScript2Action.PrescriptionSaveException.class);
@@ -133,6 +135,8 @@ class RxCorrectionSaveRollbackIntegrationTest extends CarlosUnitTestBase {
             assertThat(firstCard.getDrugId()).isEqualTo(first.getId());
             assertThat(secondCard.getDrugId()).isEqualTo(second.getId());
             assertThat(firstCard.getScript_no()).isEqualTo("77");
+            assertThat(firstCard.getDraftRevision()).isEqualTo(firstRevision);
+            assertThat(secondCard.getDraftRevision()).isEqualTo(secondRevision);
             assertThat(bean.getRandomIdDrugIdPair()).containsEntry(1L, first.getId()).containsEntry(2L, second.getId());
             assertThat(request.getAttribute("scriptId")).isNull();
             logActionMock.verifyNoInteractions();

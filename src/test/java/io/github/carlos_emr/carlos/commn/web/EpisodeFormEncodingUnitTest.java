@@ -20,6 +20,9 @@ class EpisodeFormEncodingUnitTest {
             assertThat(jsp).contains("SafeEncode.forJavaScript(episode." + getter + "())")
                     .doesNotContain("<%=episode." + getter + "()%>");
         }
+        String list = Files.readString(Path.of("src/main/webapp/WEB-INF/jsp/episode/episodeList.jsp"));
+        assertThat(list).contains("SafeEncode.forHtml(episode.getDescription())")
+                .doesNotContain("<%=episode.getDescription() %>");
     }
 
     @ParameterizedTest

@@ -337,9 +337,7 @@ class RxWriteScript2ActionCardCorrectionUnitTest extends CarlosUnitTestBase {
 
         @BeforeEach
         void persistAssignsIds() {
-            var transactionManager = org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class);
-            when(transactionManager.getTransaction(any())).thenReturn(new org.springframework.transaction.support.SimpleTransactionStatus());
-            registerMock(org.springframework.transaction.PlatformTransactionManager.class, transactionManager);
+            registerMock(org.springframework.transaction.PlatformTransactionManager.class, new NoDatabaseTransactions());
             doAnswer(invocation -> {
                 Drug saved = invocation.getArgument(0);
                 saved.setId(nextDrugIds.removeFirst());
@@ -427,15 +425,39 @@ class RxWriteScript2ActionCardCorrectionUnitTest extends CarlosUnitTestBase {
         }
 
         @Test
+        void shouldKeepConsumedDraft_whenCommitOutcomeIsUnknown() {
+            save();
+            String revision = card.getDraftRevision();
+            logActionMock.reset();
+            when(mockDrugDao.find(501)).thenReturn(row(501, false));
+            when(mockRxManager.archiveDrug(mockLoggedInInfo, 501, DEMOGRAPHIC_NO, Drug.REPRESCRIBED)).thenReturn(true);
+            registerMock(org.springframework.transaction.PlatformTransactionManager.class, new NoDatabaseTransactions() {
+                @Override
+                protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) {
+                    throw new org.springframework.transaction.TransactionSystemException("Synthetic uncertain commit");
+                }
+            });
+
+            assertThatThrownBy(this::save).isInstanceOf(RxWriteScript2Action.PrescriptionSaveException.class);
+
+            assertThat(card.getDrugId()).isEqualTo(502);
+            assertThat(card.getDraftRevision()).isNotEqualTo(revision);
+            assertThat(request.getAttribute("scriptId")).isNull();
+            logActionMock.verifyNoInteractions();
+        }
+
+        @Test
         @DisplayName("should report an incomplete save when the earlier row cannot be archived")
         void shouldReportIncompleteSave_whenEarlierRowCannotBeArchived() {
             save();
+            String revision = card.getDraftRevision();
             when(mockDrugDao.find(501)).thenReturn(row(501, false));
             when(mockRxManager.archiveDrug(any(), eq(501), anyInt(), anyString())).thenReturn(false);
 
             assertThatThrownBy(this::save).isInstanceOf(RxWriteScript2Action.PrescriptionSaveException.class);
             assertThat(card.getDrugId()).isEqualTo(501);
             assertThat(card.getScript_no()).isEqualTo("77");
+            assertThat(card.getDraftRevision()).isEqualTo(revision);
             assertThat(bean.getRandomIdDrugIdPair().get(card.getRandomId())).isEqualTo(501);
 
             // The retry must still replace 501, not the rolled-back 502.
@@ -444,5 +466,13 @@ class RxWriteScript2ActionCardCorrectionUnitTest extends CarlosUnitTestBase {
             assertThat(card.getDrugId()).isEqualTo(503);
             verify(mockRxManager, never()).archiveDrug(any(), eq(502), anyInt(), anyString());
         }
+    }
+
+    /** Exercises Spring synchronization/rollback callbacks without database writes in the unit fixture. */
+    private static class NoDatabaseTransactions extends org.springframework.transaction.support.AbstractPlatformTransactionManager {
+        @Override protected Object doGetTransaction() { return new Object(); }
+        @Override protected void doBegin(Object transaction, org.springframework.transaction.TransactionDefinition definition) { }
+        @Override protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) { }
+        @Override protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus status) { }
     }
 }

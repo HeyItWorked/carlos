@@ -1038,9 +1038,10 @@ public class RxPrescriptionData {
         }
 
         /** Restores the last committed row after a correction-save transaction rolls back. */
-        public void restoreSavedIdentity(int previousDrugId, String previousScriptNo) {
+        public void restoreSavedIdentity(int previousDrugId, String previousScriptNo, String previousDraftRevision) {
             this.drugId = previousDrugId;
             this.script_no = previousScriptNo;
+            this.draftRevision = previousDraftRevision;
         }
 
         public String getProviderNo() {
