@@ -153,6 +153,7 @@ function releaseDirtyFlag() {
 </head>
 <body>
 <form method="post" action="" name="FormName" id="FormName">
+<input type="hidden" name="playwright_latest_lab_values" id="playwright_latest_lab_values" oscarDB=latest_lab_values>
 <div id="page1" style="page-break-after:always;position:relative;">
 <img id="BGImage1" src="\${oscar_image_path}${bgImageName}" style="position:relative;left:0;top:0;width:750px;height:220px;">
 <input name="playwright_text_field" id="playwright_text_field" type="text" value="Template Text" class="noborder" style="position:absolute;left:40px;top:36px;width:220px;height:22px;">
@@ -204,6 +205,38 @@ function seedOwnedMedicalHistory(sql, provider, text) {
     VALUES (NOW(),NOW(),${demographicNo},${h.sqlString(provider)},${h.sqlString(text)},'',UUID(),'0',0)`,
   'medical-history note');
   sql.execute(`INSERT INTO casemgmt_issue_notes (id,note_id) VALUES (${chartIssue},${note})`);
+}
+
+function seedOwnedLatestLabValues(sql, provider, marker) {
+  const values = ['-4.25', '<5', '1.2e-3', '+2.5E+4', '≤0.5', '1:40', 'not detected / below limit',
+    '"><img id="pr5044-lab-injected" src="data:," onerror="window.__pr5044LabInjected=true"><script id="pr5044-lab-script">window.__pr5044LabInjected=true</script>',
+    'literal ${labvalues} and ${patient_name}'];
+  return values.map((value, index) => {
+    const measurement = h.insertId(sql, `INSERT INTO measurements
+      (type,demographicNo,providerNo,dataField,measuringInstruction,comments,dateObserved,dateEntered)
+      VALUES ('PWLB',${demographicNo},${h.sqlString(provider)},${h.sqlString(value)},'',${h.sqlString(marker)},NOW(),NOW())`,
+    'literal lab measurement');
+    const identifier = `${marker}-lab-${index}`;
+    sql.execute(`INSERT INTO measurementsExt (measurement_id,keyval,val)
+      VALUES (${measurement},'identifier',${h.sqlString(identifier)})`);
+    return { identifier, value };
+  });
+}
+
+async function assertOwnedLatestLabValues(page, expected) {
+  const field = page.locator('#playwright_latest_lab_values');
+  assert(await field.count() === 1, 'The latest_lab_values hidden AP field is missing or duplicated');
+  let values;
+  try { values = JSON.parse(await field.inputValue()); }
+  catch { throw new Error('The latest_lab_values AP did not provide valid JSON'); }
+  assert(Array.isArray(values) && values.length === expected.length,
+    'The latest_lab_values AP omitted or duplicated owned measurements');
+  const actual = new Map(values.map(row => [row.loincCode, row.measurementValue]));
+  assert(actual.size === expected.length && expected.every(row => actual.get(row.identifier) === row.value),
+    'The latest_lab_values AP changed a literal clinical result or its identifier');
+  assert(await page.locator('#pr5044-lab-injected,#pr5044-lab-script').count() === 0
+    && await page.evaluate(() => window.__pr5044LabInjected !== true),
+  'A latest_lab_values result escaped its hidden field into executable markup');
 }
 
 function isExpectedMissingAsset(status, responseUrl) {
@@ -640,9 +673,13 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
   let offlineBadge = null;
   const sql = h.createSqlRunner(h.readConfig().mysql);
   const ownedMarker = newOwnedMarker();
-  const medicalHistory = `${ownedMarker} synthetic medical history & follow-up\nSecond synthetic history line`;
+  const medicalHistory = `${ownedMarker} synthetic medical history & follow-up\nSecond synthetic history line` + ' literal ${medicalHistory}';
   // Taken before anything is saved, so only the run's own attachment rows are ever deleted.
   const ownedRows = eformRows(sql);
+  // Install cleanup before any insert. Extension rows are removed through the
+  // owned measurement while its parent still exists, then measurements by patient.
+  ownedRows.extra.push(['measurements', 'demographicNo']);
+  ownedRows.via.push({ table: 'measurementsExt', column: 'measurement_id', parent: 'measurements', key: 'id', patient: 'demographicNo' });
 
   const launchOptions = {
     headless: true,
@@ -657,6 +694,7 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
     assert(provider, 'The configured test login has no provider');
     demographicNo = createOwnedPatient(sql, { marker: ownedMarker, provider });
     seedOwnedMedicalHistory(sql, provider, medicalHistory);
+    const latestLabValues = seedOwnedLatestLabValues(sql, provider, ownedMarker);
     browser = await chromium.launch(launchOptions);
     const context = await browser.newContext({ ignoreHTTPSErrors: shouldIgnoreHttpsErrors(), viewport: { width: 1440, height: 1600 } });
     offlineBadge = await installOfflineCcBadge(context, process.env.EFORM_CC_BADGE_FIXTURE);
@@ -687,17 +725,21 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
     assert(await addPage.locator('#playwright_textarea_field').inputValue() === medicalHistory,
       'The bundled medical_history AP silently omitted or changed the owned clinical history');
     console.log('PASS bundled medical_history AP populated the exact owned clinical history before editing');
+    await assertOwnedLatestLabValues(addPage, latestLabValues);
+    console.log('PASS bundled latest_lab_values AP preserved all nine owned literal results as JSON without executable markup');
     const fdid = await saveEformAndCaptureFdid(addPage, expectedState);
     await screenshot(addPage, 'consult-acceptance-after-save');
     await addPage.close();
 
     const directPage = await openSavedEformDirect(context, fdid);
     await assertSavedFormState(directPage, expectedState, fdid, 'consult-acceptance-direct-reopen');
+    await assertOwnedLatestLabValues(directPage, latestLabValues);
     await directPage.close();
 
     const patientListPopup = await openSavedEformFromPatientList(context, fdid);
     assert(patientListPopup.url().includes(`fdid=${fdid}`), `Patient list popup did not open the expected saved-form route: ${patientListPopup.url()}`);
     await assertSavedFormState(patientListPopup, expectedState, fdid, 'consult-acceptance-patient-list-reopen');
+    await assertOwnedLatestLabValues(patientListPopup, latestLabValues);
     await patientListPopup.close();
 
     const newConsultationPage = await openNewConsultation(context);

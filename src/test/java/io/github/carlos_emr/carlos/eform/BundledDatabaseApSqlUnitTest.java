@@ -22,12 +22,14 @@ package io.github.carlos_emr.carlos.eform;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.sql.ResultSet;
+import java.sql.DriverManager;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,6 +38,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import jakarta.xml.bind.JAXBContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -48,6 +51,7 @@ import io.github.carlos_emr.carlos.db.LegacyJdbcQuery;
 import io.github.carlos_emr.carlos.eform.data.DatabaseAP;
 import io.github.carlos_emr.carlos.eform.data.EForm;
 import io.github.carlos_emr.carlos.eform.data.EFormApConfig;
+import io.github.carlos_emr.carlos.eform.util.EFormApCacheForPdfGenerationServlet;
 import io.github.carlos_emr.carlos.managers.NioFileManager;
 import io.github.carlos_emr.carlos.report.data.ParameterizedSql;
 import io.github.carlos_emr.carlos.test.unit.CarlosUnitTestBase;
@@ -96,14 +100,117 @@ class BundledDatabaseApSqlUnitTest extends CarlosUnitTestBase {
         assertThat(lineSeparators).containsExactlyElementsOf(expected);
     }
 
-    @Test
-    void shouldKeepDecimalPointsInLatestLabValues_withoutAnAmbiguousSqlEscape() throws Exception {
-        String sql = new EForm().parameterizeAllFields(definition("latest_lab_values").getApSQL()).getSql();
+    @ParameterizedTest(name = "latest lab value preserves {0} through SQL, JSON and HTML fields")
+    @MethodSource("clinicalLabValues")
+    void shouldPreserveClinicalLabValues_withoutChangingMeaningOrCreatingMarkup(String name, String input, String expected) throws Exception {
+        DatabaseAP ap = definition("latest_lab_values");
+        String sql = new EForm().parameterizeAllFields(ap.getApSQL()).getSql();
         assertThatCode(() -> EFormSqlSafety.validateLegacySqlSafety(sql)).doesNotThrowAnyException();
-        var matcher = Pattern.compile("REGEXP_REPLACE\\(m\\.dataField, '([^']+)', ' '\\)").matcher(sql);
+        // Execute the exact projection shipped in the AP, rather than a duplicate
+        // expression in the test. Bind clinical strings, including hostile content.
+        var matcher = Pattern.compile("(?m)^\\s*(.*?)\\s*AS\\s+datafield\\s*,\\s*$", Pattern.CASE_INSENSITIVE).matcher(sql);
         assertThat(matcher.find()).isTrue();
-        String regex = matcher.group(1);
-        assertThat(regex).isEqualTo("[^[:alnum:]^.]+");
+        String json;
+        try (var connection = DriverManager.getConnection("jdbc:h2:mem:bundled_latest_lab;MODE=MySQL");
+             var statement = connection.prepareStatement("SELECT JSON_OBJECT('measurementValue': " + matcher.group(1)
+                     + ") FROM (SELECT CAST(? AS VARCHAR) AS dataField) m")) {
+            statement.setString(1, input);
+            try (var rows = statement.executeQuery()) {
+                assertThat(rows.next()).isTrue();
+                json = rows.getString(1);
+                assertThat(rows.next()).isFalse();
+            }
+        }
+        var mapper = new ObjectMapper();
+        var clinicalValue = mapper.readTree(json).get("measurementValue");
+        if (expected == null) assertThat(clinicalValue.isNull()).isTrue();
+        else assertThat(clinicalValue.textValue()).isEqualTo(expected);
+
+        // The AP's JSON is data in either supported eForm container. Its quotes,
+        // comparison operators and markup must survive as literal field content.
+        for (String fieldType : List.of("hidden", "textarea")) {
+            ResultSet rows = mock(ResultSet.class);
+            when(rows.next()).thenReturn(true, false);
+            when(rows.getString("labvalues")).thenReturn(json);
+            List<ParameterizedSql> executed = new ArrayList<>();
+            try (var loader = mockStatic(EFormLoader.class);
+                 var jdbc = mockStatic(LegacyJdbcQuery.class, CALLS_REAL_METHODS)) {
+                loader.when(EFormLoader::getMarker).thenReturn("oscarDB");
+                loader.when(() -> EFormLoader.getAP("latest_lab_values")).thenReturn(ap);
+                jdbc.when(() -> LegacyJdbcQuery.getPreparedResultSet(any(ParameterizedSql.class)))
+                        .thenAnswer(invocation -> { executed.add(invocation.getArgument(0)); return rows; });
+                EForm form = new EForm();
+                form.setDemographicNo("7");
+                form.setFormHtml(fieldType.equals("textarea")
+                        ? "<form><textarea name=LabValues oscarDB=latest_lab_values></textarea></form>"
+                        : "<form><input type=hidden name=LabValues oscarDB=latest_lab_values></form>");
+                form.setDatabaseAPs();
+                var document = Jsoup.parse(form.getFormHtml());
+                assertThat(document.select("img,script,[onerror],[onclick]")).isEmpty();
+                var field = document.selectFirst("[name=LabValues]");
+                assertThat(field).isNotNull();
+                String roundtrip = fieldType.equals("textarea") ? field.wholeText() : field.val();
+                assertThat(roundtrip).isEqualTo(json);
+                assertThat(mapper.readTree(roundtrip).get("measurementValue")).isEqualTo(clinicalValue);
+                assertThat(executed).hasSize(1);
+                assertThat(executed.getFirst().getParams()).containsExactly("7");
+            }
+        }
+    }
+
+    private static Stream<Arguments> clinicalLabValues() {
+        return Stream.of(
+                Arguments.of("negative decimal", "-4.25", "-4.25"),
+                Arguments.of("less than", "<5", "<5"),
+                Arguments.of("greater than", ">100", ">100"),
+                Arguments.of("less or equal", "<=0.2", "<=0.2"),
+                Arguments.of("greater or equal", ">=15", ">=15"),
+                Arguments.of("negative exponent", "1.2e-3", "1.2e-3"),
+                Arguments.of("positive exponent", "+2.5E+4", "+2.5E+4"),
+                Arguments.of("Unicode minus", "−0.25", "−0.25"),
+                Arguments.of("Unicode less or equal", "≤0.5", "≤0.5"),
+                Arguments.of("Unicode greater or equal", "≥1.5", "≥1.5"),
+                Arguments.of("ratio", "1:40", "1:40"),
+                Arguments.of("Unicode range", "3–5", "3–5"),
+                Arguments.of("scientific multiplication", "1×10^-3", "1×10^-3"),
+                Arguments.of("qualitative result", "not detected / below limit", "not detected / below limit"),
+                Arguments.of("outer spaces", "  -4.25  ", "-4.25"),
+                Arguments.of("hostile markup", "</textarea><img src=x onerror=\"alert(1)\"><script>alert(1)</script>& \" ' \\\n",
+                        "</textarea><img src=x onerror=\"alert(1)\"><script>alert(1)</script>& \" ' \\\n"),
+                Arguments.of("quotes and newline", "1'\"\\\n<bad>", "1'\"\\\n<bad>"),
+                Arguments.of("self-referencing marker", "${labvalues}", "${labvalues}"),
+                Arguments.of("another AP marker", "${medicalHistory}", "${medicalHistory}"),
+                Arguments.of("unfinished marker", "${unfinished", "${unfinished"),
+                Arguments.of("NULL", null, null));
+    }
+
+    @Test
+    void shouldPreserveLiteralCrossAliasData_inBothBatchCallersAndThePdfCache() throws Exception {
+        DatabaseAP ap = new DatabaseAP("literal_output", "SELECT ${demographic}", "${first}|${second}|${first}");
+        String first = "${second}", second = "${first} $1\\tail${unfinished";
+        var values = new ArrayList<>(List.of(first, second, first));
+        String expected = first + "|" + second + "|" + first;
+        try (var loader = mockStatic(EFormLoader.class);
+             var util = mockStatic(EFormUtil.class, CALLS_REAL_METHODS)) {
+            loader.when(EFormLoader::getMarker).thenReturn("oscarDB");
+            loader.when(() -> EFormLoader.getAP("literal_output")).thenReturn(ap);
+            util.when(() -> EFormUtil.getValuesOrNull(anyList(), any(ParameterizedSql.class))).thenReturn(values);
+            util.when(() -> EFormUtil.getValues(anyList(), any(ParameterizedSql.class))).thenReturn(values);
+            assertThat(new APExecute().execute("literal_output", "7")).isEqualTo(expected);
+            assertThat(new APExecute().execute("literal_output", "7", 19)).isEqualTo(expected);
+            EForm form = new EForm(); form.setDemographicNo("7");
+            form.setFormHtml("<form><input type=hidden name=Literal oscarDB=literal_output></form>");
+            form.setDatabaseAPs();
+            assertThat(Jsoup.parse(form.getFormHtml()).selectFirst("[name=Literal]").val()).isEqualTo(expected);
+            var execute = EFormApCacheForPdfGenerationServlet.class.getDeclaredMethod("execute", EForm.class, DatabaseAP.class);
+            execute.setAccessible(true);
+            assertThat(execute.invoke(null, form, ap)).isEqualTo(expected);
+
+            // Existing batch APIs ignore unused result columns for a constant output.
+            ap.setApOutput("constant output");
+            assertThat(new APExecute().execute("literal_output", "7")).isEqualTo("constant output");
+            assertThat(new APExecute().execute("literal_output", "7", 19)).isEqualTo("constant output");
+        }
     }
 
     @Test

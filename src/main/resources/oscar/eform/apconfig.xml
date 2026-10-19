@@ -2524,7 +2524,7 @@
 			RANK() OVER (PARTITION BY me.val ORDER BY m.dateObserved DESC, m.id DESC) AS ranking,
 			m.id,
 			m.type,
-			TRIM(REGEXP_REPLACE(m.dataField, '[^[:alnum:]^.]+', ' '))AS datafield,
+			TRIM(m.dataField) AS datafield,
 			m.dateObserved,
 			me.val AS loincCode,
 			m.measuringInstruction AS 'range'
