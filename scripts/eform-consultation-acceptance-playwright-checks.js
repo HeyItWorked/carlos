@@ -153,7 +153,7 @@ function releaseDirtyFlag() {
 <div id="page1" style="page-break-after:always;position:relative;">
 <img id="BGImage1" src="\${oscar_image_path}${bgImageName}" style="position:relative;left:0;top:0;width:750px;height:220px;">
 <input name="playwright_text_field" id="playwright_text_field" type="text" value="Template Text" class="noborder" style="position:absolute;left:40px;top:36px;width:220px;height:22px;">
-<textarea name="playwright_textarea_field" id="playwright_textarea_field" class="noborder" style="position:absolute;left:40px;top:76px;width:240px;height:48px;">Template Textarea</textarea>
+<textarea name="playwright_textarea_field" id="playwright_textarea_field" oscarDB=medical_history class="noborder" style="position:absolute;left:40px;top:76px;width:240px;height:48px;"></textarea>
 <select name="playwright_select_field" id="playwright_select_field" style="position:absolute;left:320px;top:36px;width:180px;height:24px;">
   <option value="">Choose</option>
   <option value="alpha">Alpha</option>
@@ -186,6 +186,21 @@ function cleanupFixtureFiles(fixture) {
     return;
   }
   fs.rmSync(fixture.tempDir, { recursive: true, force: true });
+}
+
+// The legacy AP used to reject its own bundled newline literal, log an ERROR,
+// and quietly return an empty clinical field. Seed only this run's owned chart;
+// removeOwnedPatient already removes its issue links, notes, and chart issues.
+function seedOwnedMedicalHistory(sql, provider, text) {
+  const issue = sql.value("SELECT issue_id FROM issue WHERE code='MedHistory'");
+  assert(/^[1-9]\d*$/.test(issue || ''), 'The medical-history catalog issue must exist exactly once');
+  const chartIssue = h.insertId(sql, `INSERT INTO casemgmt_issue (demographic_no,issue_id,type,update_date)
+    VALUES (${demographicNo},${issue},'doctor',NOW())`, 'medical-history chart issue');
+  const note = h.insertId(sql, `INSERT INTO casemgmt_note
+    (update_date,observation_date,demographic_no,provider_no,note,history,uuid,locked,archived)
+    VALUES (NOW(),NOW(),${demographicNo},${h.sqlString(provider)},${h.sqlString(text)},'',UUID(),'0',0)`,
+  'medical-history note');
+  sql.execute(`INSERT INTO casemgmt_issue_notes (id,note_id) VALUES (${chartIssue},${note})`);
 }
 
 function isExpectedMissingAsset(status, responseUrl) {
@@ -621,6 +636,7 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
   let browser = null;
   const sql = h.createSqlRunner(h.readConfig().mysql);
   const ownedMarker = newOwnedMarker();
+  const medicalHistory = `${ownedMarker} synthetic medical history & follow-up\nSecond synthetic history line`;
   // Taken before anything is saved, so only the run's own attachment rows are ever deleted.
   const ownedRows = eformRows(sql);
 
@@ -636,6 +652,7 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
     const provider = sql.value(`SELECT provider_no FROM security WHERE user_name=${h.sqlString(testUser)}`);
     assert(provider, 'The configured test login has no provider');
     demographicNo = createOwnedPatient(sql, { marker: ownedMarker, provider });
+    seedOwnedMedicalHistory(sql, provider, medicalHistory);
     browser = await chromium.launch(launchOptions);
     const context = await browser.newContext({ ignoreHTTPSErrors: shouldIgnoreHttpsErrors(), viewport: { width: 1440, height: 1600 } });
     const landingPage = await login(context);
@@ -662,6 +679,9 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
     importedFid = uploadResult.fid;
 
     const addPage = await openAddEform(context, importedFid);
+    assert(await addPage.locator('#playwright_textarea_field').inputValue() === medicalHistory,
+      'The bundled medical_history AP silently omitted or changed the owned clinical history');
+    console.log('PASS bundled medical_history AP populated the exact owned clinical history before editing');
     const fdid = await saveEformAndCaptureFdid(addPage, expectedState);
     await screenshot(addPage, 'consult-acceptance-after-save');
     await addPage.close();
