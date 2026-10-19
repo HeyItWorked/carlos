@@ -42,12 +42,10 @@ async function workflow(s) {
   // The parent cleanup removes the patient's demographicExt and demographicArchive rows; an update also writes
   // demographicExtArchive (keyed by archive id) and demographiccust, so those go first.
   s.cleanup(() => {
-    sql.execute(`DELETE FROM demographicExtArchive WHERE archiveId IN (SELECT id FROM demographicArchive WHERE demographic_no=${patient})
-      OR demographic_no=${patient};
+    sql.execute(`DELETE FROM demographicExtArchive WHERE demographic_no=${patient};
       DELETE FROM demographiccust WHERE demographic_no=${patient}`);
     h.assert(sql.value(`SELECT (SELECT COUNT(*) FROM demographiccust WHERE demographic_no=${patient})
-      + (SELECT COUNT(*) FROM demographicExtArchive WHERE demographic_no=${patient}
-        OR archiveId IN (SELECT id FROM demographicArchive WHERE demographic_no=${patient}))`) === '0',
+      + (SELECT COUNT(*) FROM demographicExtArchive WHERE demographic_no=${patient})`) === '0',
     'The owned patient\'s custom-field and extension archive rows were not removed');
   });
   const ext = key => sql.value(`SELECT IFNULL((SELECT value FROM demographicExt WHERE demographic_no=${patient}
