@@ -13788,10 +13788,6 @@
       "fixtures": "Temporarily registers RH Form if absent and restores it; must not run concurrently with other checks (live wrapper: EXCLUSIVE=1).",
       "envSet": {
         "RH_INJECTION_ONLY": "privacy"
-      },
-      "expectedFailure": {
-        "finding": 293,
-        "step": "the RH injection panel writes no clinical fixture data to the server log"
       }
     },
     {

@@ -343,6 +343,13 @@ async function workflow(s) {
     h.assert(!noEdoc.text.includes(replayText),
       `The answer to a failed Add to Documents (HTTP ${noEdoc.status}) is the replay refusal "${replayText}.", which is what a `
       + 'replayed submission gets and hides that the eForm was saved and only the document step failed');
+    const failedStep = bundleMessage('eform.submitStep.addToDocuments', 'Add to Documents');
+    const savedStepMessage = bundleMessage('eform.submitSavedStepIncomplete',
+      "The eForm was saved, but {0} did not complete. Check the patient''s eForms and chart before you redo that step.")
+      .replace('{0}', failedStep).replace(/''/g, "'");
+    h.assert(noEdoc.status === 409 && noEdoc.text === savedStepMessage,
+      `The saved eForm's refused document step did not return HTTP 409 and its specific recovery guidance (HTTP ${noEdoc.status})`);
+    console.log(`    expected post-save denial receipt: ${new Date().toISOString()}; HTTP 409; eForm stored once; no document filed; step=ADD_TO_DOCUMENTS`);
   });
 }
 
