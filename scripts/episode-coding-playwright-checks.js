@@ -64,8 +64,11 @@ async function workflow(s) {
   if (literal) {
     await s.step('reopen an episode script payload as literal text without executing stored JavaScript', async () => {
       description = `${marker} ');window.__episodePayloadExecuted=1;//</script><script>window.__episodePayloadExecuted=2</script>`;
-      await editor.locator('#description').fill(description);
-      await save();
+      // The front-door WAF correctly refuses script markup in a submitted form. Seed the
+      // owned stored-XSS fixture directly, as the xss-poison checks do, then exercise the
+      // real chart opener and rendering. Ordinary apostrophe prose was saved through the UI above.
+      await editor.close();
+      sql.execute(`UPDATE Episode SET description=${h.sqlString(description)} WHERE id=${id} AND demographicNo=${patient}`);
       await expectValue(sql, `SELECT description FROM Episode WHERE id=${id}`, description, 'Script fixture changed on save');
       const link = chart.locator(`a[onclick*="episode.id=${id}"]`).first();
       editor = await ui.clickOpensPopup(chart, link, {context:s.context, recorder:s.recorder, label:'episode-edit-literal-script',position:{x:8,y:9}});
