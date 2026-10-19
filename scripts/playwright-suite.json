@@ -5474,11 +5474,7 @@
       "env": [
         "LAB_UPLOAD_DOCUMENT_STORE"
       ],
-      "notes": "Five steps pass on 2026.08.0~alpha19 (the old note that Row Display threw a ReferenceError on scanDOM and loaded a missing spinner image is out of date). The sixth to eighth steps are for finding 149: a second lab whose result, units and range carry inert xss-poison markup (payloads 1100-1102; the stored HL7 text is rewritten by SQL, as an imported lab's would be) is listed by Row Display as literal text with the markup in the tooltip source, hovering its row shows the tooltip (the control step), and, in the pinned eighth step, the tooltip must hold no [data-xp] element; DisplayLabValue.jsp attribute-encodes the lab text into the row's title and boxover.js writes the decoded title with innerHTML.",
-      "expectedFailure": {
-        "finding": 149,
-        "step": "hovering a Row Display row whose result, units and range carry markup builds no element from them"
-      },
+      "notes": "Eight steps pass on the installed Ubuntu 26.04 beta1 packages (2026-10-19): manually entered labs reach the patient, grid/row views, lab details and plotted graph; stored markup remains literal in both the row and visible hovered tooltip with no constructed data-xp element. Finding149 was fixed by #4448. The fixture control decodes one HTML-entity layer from boxover source so the corrected HTML-encoded payload is accepted; the actual hover still requires the exact complete result, units and range.",
       "fixtures": "Owned patient; a two-test lab and a one-test markup lab, both created through Inbox ▸ Create Lab under owned accessions (the markup lab's stored HL7 text is then rewritten by SQL); labs, routing and measurement rows removed."
     },
     {
@@ -10422,11 +10418,7 @@
         "XSS_POISON_LEDGER_DIR"
       ],
       "fixtures": "One owned FAKE patient, a poisoned eForm template and a patient-independent template with current and deleted instances, an eForm group and a security role. Inserts GLOBALLY VISIBLE poisoned rows while it runs (an eForm template, an eForm group, a role): other checks run in parallel would see them, and forms that echo them back are refused by the WAF, so run it alone (the suite runner is sequential). The group Delete confirmation is only opened and dismissed. Seeded by SQL (bypassing the WAF, like imported data) and recorded by key in a per-run ledger (scripts/lib/xss-poison-helpers.js Seeder); cleanup deletes exactly those keys and asserts each gone, including after a failed run; a run killed outright is recovered by key from its ledger by the next xss-poison run, and when no other xss-poison run is alive a sweep removes any row carrying '<i data-xp=' and asserts none is left. ",
-      "notes": "Expected to FAIL at the last step (findings 121, 125): Manage eForms' upload form prints role names raw in its select (eform/partials/upload.jsp:127); the eForm Groups Delete confirmation re-parses the attribute-encoded group name as HTML (efmmanageformgroups.jsp:148 into efmFooter.jspf:70 .html()); Patient-independent eForms prints instance name and subject raw on the current list (eform/efmmanageindependent.jsp:149,151) and on the Deleted list (eform/efmmanageindependentdeleted.jsp:160,162). The Deleted eForms list also throws TypeError on unload (window.opener cut by COOP, known finding 77). The seeded template's editor, group view, patient eForm list and Add eForm list encode. Coverage is asserted: each surface must show the seeded fields it is known to show (MISSING otherwise), and a link that cannot be opened is NOT-OPENED.",
-      "expectedFailure": {
-        "finding": 121,
-        "step": "the walk found no output-encoding defect"
-      }
+      "notes": "Regression for findings 121 and 125, fixed in beta1. Manage eForms upload role names, group Delete confirmation, current/deleted patient-independent instance names and subjects, and the patient eForm lists must render stored markup as literal text. Coverage is asserted for every reached seeded field; missing fields and unopened links fail. All six steps passed on the installed Ubuntu 26.04 beta1 packages on 2026-10-19."
     },
     {
       "name": "xss-poison-messenger-consult",
@@ -10514,11 +10506,7 @@
         "XSS_POISON_LEDGER_DIR"
       ],
       "fixtures": "Part 1 of the Administration walk (scripts/lib/xss-poison-admin-walk.js, payload numbers from 1): about 35 poisoned rows across provider, group, role, job, lookup, quick-list, document-template, queue, eForm, report-template, measurement, appointment-type, tickler-category, billing, consultation-service, institution, REST-client, lot-number, guideline, waiting-list and system-message tables. Inserts GLOBALLY VISIBLE poisoned rows while it runs (all of them, including an active provider): other checks run in parallel would see them, and forms that echo them back are refused by the WAF, so run it alone (the suite runner is sequential). Waits five minutes for the active-provider cache. Seeded by SQL (bypassing the WAF, like imported data) and recorded by key in a per-run ledger (scripts/lib/xss-poison-helpers.js Seeder); cleanup deletes exactly those keys and asserts each gone, including after a failed run; a run killed outright is recovered by key from its ledger by the next xss-poison run, and when no other xss-poison run is alive a sweep removes any row carrying '<i data-xp=' and asserts none is left. ",
-      "notes": "Expected to FAIL at the last step (finding 121): Manage eForms' upload form prints role names raw (eform/partials/upload.jsp:127). The other items of the first half of the menu (users, billing, labs, forms) encode the seeded values they show. Manage eForms, Add New Queue, Manage Payment Type and Add Billing Location must show their seeded rows; Customize Consult Appointment Instructions must open, but its seeded item is not required (30-minute lookup-list cache). Coverage is asserted: each surface must show the seeded fields it is known to show (MISSING otherwise), and a link that cannot be opened is NOT-OPENED.",
-      "expectedFailure": {
-        "finding": 121,
-        "step": "the walk found no output-encoding defect"
-      }
+      "notes": "Regression for finding 121: Manage eForms' upload form must render role names as text. The same stored role-name surface passed in xss-poison-eform on the installed Ubuntu 26.04 beta1 packages on 2026-10-19. The other items of the first half of the menu (users, billing, labs, forms) encode the seeded values they show. Manage eForms, Add New Queue, Manage Payment Type and Add Billing Location must show their seeded rows; Customize Consult Appointment Instructions must open, but its seeded item is not required (30-minute lookup-list cache). Coverage is asserted: each surface must show the seeded fields it is known to show (MISSING otherwise), and a link that cannot be opened is NOT-OPENED."
     },
     {
       "name": "xss-poison-admin-reports-system",
@@ -12633,10 +12621,15 @@
       "env": [],
       "mutates": [
         "encounterForm",
-        "provider"
+        "provider",
+        "providerArchive",
+        "providerbillcenter",
+        "property:official_first_name",
+        "property:official_second_name",
+        "property:official_last_name"
       ],
-      "notes": "#4439 D10 and D11 (#4965), the two links into the BC WCB pages that billing-bc-wcb-form does not take: Administration ▸ Select Forms adds BC-WCB (the BC seed ships it off the form list) and the chart's Forms menu offers it; Chart ▸ Forms ▸ BC-WCB opens a new WCB form for the patient; Administration ▸ Billing ▸ Simulate Submission File ▸ Create Report lists the owned WCB claim and its invoice link opens the claim's correction page; Settle Bill there comes back to the page with the claim settled (status S, one history row); last, Select Forms removes BC-WCB and every encounterForm row is as found. On release/2026.08 it fails at the BC-WCB step until #4966 merges: the seeded form value still names viewformwcb.do (HTTP 404), and the WCB form page itself opens only once #4944 merges. The correction link steps also wait for #4966 (the link named the WEB-INF JSP, HTTP 404). Notes only, no pin: the fixes are open PRs.",
-      "fixtures": "The owned FAKE- patient made a BC patient; one billing physician made in preflight, before login, because the simulation lists the cached active providers (the cache fills at login; the live wrapper starts a fresh Tomcat); one open WCB claim for them (billing, billingmaster and a wcb row for fee item 19937). BC-WCB is shown on the clinic's form list while the check runs, and the physician shows in clinic-wide lists, so it must not run concurrently with other checks (live wrapper: EXCLUSIVE=1). Cleanup puts every encounterForm display order back and asserts the list as found, deletes the patient's wcb rows and the claim's history, billingmaster and billing rows, and the physician, and asserts each is gone."
+      "notes": "#4439 D10 and D11 (#4965), the two links into the BC WCB pages that billing-bc-wcb-form does not take: Administration ▸ Select Forms adds BC-WCB (the BC seed ships it off the form list) and the chart's Forms menu offers it; Chart ▸ Forms ▸ BC-WCB opens a new WCB form for the patient; Administration ▸ Billing ▸ Simulate Submission File ▸ Create Report lists the owned WCB claim and its invoice link opens the claim's correction page; Settle Bill there comes back to the page with the claim settled (status S, one history row); last, Select Forms removes BC-WCB, the visible menu is unchanged and database positions match the intentional normalized order (#4945); cleanup restores the exact original raw metadata. On release/2026.08 it fails at the BC-WCB step until #4966 merges: the seeded form value still names viewformwcb.do (HTTP 404), and the WCB form page itself opens only once #4944 merges. The correction link steps also wait for #4966 (the link named the WEB-INF JSP, HTTP 404). Notes only, no pin: the fixes are open PRs.",
+      "fixtures": "The owned FAKE- BC patient; one billing physician refreshed through the real Admin Update Provider path so cached active-provider lists are current; one open WCB claim (billing, billingmaster and wcb for fee item 19937). Requires EXCLUSIVE=1 because it temporarily changes the clinic form list and provider directory. Cleanup restores every encounterForm row and raw display order, deletes the owned claim/history and physician, and removes/asserts only that physician's property, providerArchive and providerbillcenter side rows."
     },
     {
       "name": "billing-bc-bill-create-save",
@@ -13729,17 +13722,13 @@
       "env": [
         "RH_INJECTION_ONLY"
       ],
-      "notes": "An existing injection on the current pregnancy is displayed through the RH form and archived by its panel Delete link. Independent of Add Injection so that a broken add path cannot hide display/delete failures. Confirmed on packaged release/2026.08 at a7611d07b4a (Ubuntu 26.04); finding 291.",
+      "notes": "An existing injection on the current pregnancy is displayed through the RH form and archived by its panel Delete link. Independent of Add Injection. Both display and deletion steps passed on the installed Ubuntu 26.04 beta1 packages on 2026-10-19 (finding 291).",
       "mutates": [
         "encounterForm"
       ],
       "fixtures": "Temporarily registers RH Form if absent and restores it; must not run concurrently with other checks (live wrapper: EXCLUSIVE=1).",
       "envSet": {
         "RH_INJECTION_ONLY": "existing"
-      },
-      "expectedFailure": {
-        "finding": 291,
-        "step": "a saved RH form displays an existing injection with its lot, product, dose and reason"
       }
     },
     {
@@ -14126,14 +14115,10 @@
         "EPISODE_ACTION": "literal"
       },
       "fixtures": "Owned patient and episodes; temporary provider-specific episode grants restored; must not run concurrently with other checks (live wrapper: EXCLUSIVE=1).",
-      "notes": "Save ordinary apostrophes in an episode description, then reopen through the chart and require complete description/date controls.",
+      "notes": "Save ordinary apostrophes in an episode description, reopen through the chart with complete description/date controls, then seed an owned stored script payload by SQL and require literal text with no execution. All three steps passed on the installed Ubuntu 26.04 beta1 packages on 2026-10-19 (finding 299).",
       "mutates": [
         "secObjPrivilege"
-      ],
-      "expectedFailure": {
-        "finding": 299,
-        "step": "reopen an episode containing an apostrophe with its complete description and dates"
-      }
+      ]
     },
     {
       "name": "health-care-team-embedded-actions",

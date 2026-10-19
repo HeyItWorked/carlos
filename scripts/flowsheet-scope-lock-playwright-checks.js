@@ -137,9 +137,9 @@ async function workflow(s) {
     h.assert(await weight.count() === 1, 'NULL provider scope did not load the weight item');
     h.assert(await weight.locator('i[title="Hidden at clinic or provider level"]').count() === 1,
       'The patient editor did not mark the provider hide as inherited');
-    h.assert(await weight.getByRole('link', {name: 'Show this measurement', exact: true}).count() === 0,
+    h.assert(await weight.locator('a[title="Show this measurement"]').count() === 0,
       'The patient editor can restore a provider-level hide');
-    h.assert(await weight.getByRole('link', {name: 'Revert to settings from higher scope', exact: true}).count() === 0,
+    h.assert(await weight.locator('a[title="Revert to settings from higher scope"]').count() === 0,
       'The patient editor can revert a provider-level update');
   });
 
@@ -149,9 +149,10 @@ async function workflow(s) {
     await expectRemovable('provider', 'NULL provider editor');
     const weight = page.locator('#measurementTbl tbody tr')
       .filter({has: page.locator('td:nth-child(3)').filter({hasText: /^WT$/})});
-    h.assert(await weight.getByRole('link', {name: 'Show this measurement', exact: true}).count() === 1,
+    // Font Awesome's generated glyph is the accessible name of these icon links, so use their actual titles.
+    h.assert(await weight.locator('a[title="Show this measurement"]').count() === 1,
       'The provider cannot restore its own NULL-demographic hide');
-    h.assert(await weight.getByRole('link', {name: 'Revert to settings from higher scope', exact: true}).count() === 1,
+    h.assert(await weight.locator('a[title="Revert to settings from higher scope"]').count() === 1,
       'The provider cannot revert its own NULL-demographic update');
     await navigate(page, page.getByRole('link', {name: 'All Patients', exact: true}));
     await expectRemovable('clinic', 'NULL clinic editor');
