@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 CARLOS Contributors. GPL-2.0-or-later. */
 package io.github.carlos_emr.carlos.billings.ca.bc.pageUtil;
 
+import jakarta.servlet.http.HttpServletRequest;
 import io.github.carlos_emr.carlos.managers.SecurityInfoManager;
 import io.github.carlos_emr.carlos.test.unit.CarlosUnitTestBase;
 import io.github.carlos_emr.carlos.utility.LoggedInInfo;
@@ -31,7 +32,7 @@ class EditServiceCodeAssoc2ActionUnitTest extends CarlosUnitTestBase {
         try (MockedStatic<ServletActionContext> context = mockStatic(ServletActionContext.class);
              MockedStatic<LoggedInInfo> login = mockStatic(LoggedInInfo.class)) {
             context.when(ServletActionContext::getRequest).thenReturn(request);
-            login.when(() -> LoggedInInfo.getLoggedInInfoFromSession(any())).thenReturn(user);
+            login.when(() -> LoggedInInfo.getLoggedInInfoFromSession(any(HttpServletRequest.class))).thenReturn(user);
             EditServiceCodeAssoc2Action action = new EditServiceCodeAssoc2Action();
             action.setMode("create");
             action.validate();
