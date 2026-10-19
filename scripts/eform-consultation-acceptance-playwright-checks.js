@@ -42,6 +42,8 @@
  *   MYSQL_HOST/USER/PASSWORD/DATABASE (the owned patient and its cleanup)
  *   EFORM_CONSULT_SCREENSHOT_DIR=/tmp
  *   LIBRARY_EFORM_NAME='Signature trick' (optional stored form with BGImage1/BGImage2)
+ *   EFORM_CC_BADGE_FIXTURE=/path/to/cc-by-sa-3.0-80x15.png (optional pinned official offline badge;
+ *     requires adjacent .provenance.json; records cache identity/use, does not test external internet availability)
  *   ALLOW_NON_LOCAL_BASE_URL=true only when intentionally targeting a non-local test app
  *
  * FIXTURE. The eForm is saved for a FAKE patient this check creates (lib/owned-patient.js: last name = a FAKE-PW run marker). It
@@ -59,6 +61,7 @@ const { buildArtifactPath } = require('./eform-local-playwright-utils');
 const h = require('./lib/playwright-harness');
 const { createOwnedPatient, eformRows, newOwnedMarker, removeOwnedPatient } = require('./lib/owned-patient');
 const { storedBackgroundSnapshot, expectedBackgrounds, imageIdentity, assertLibraryBackgrounds } = require('./eform-library-background-probe');
+const { installOfflineCcBadge } = require('./lib/eform-offline-cc-badge');
 
 const baseUrl = validateBaseUrl(process.env.BASE_URL || 'http://127.0.0.1:8080/carlos');
 const chromePath = process.env.CHROME_PATH || '';
@@ -634,6 +637,7 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
   let libraryFid = null;
   let libraryRuntimeProbe = null;
   let browser = null;
+  let offlineBadge = null;
   const sql = h.createSqlRunner(h.readConfig().mysql);
   const ownedMarker = newOwnedMarker();
   const medicalHistory = `${ownedMarker} synthetic medical history & follow-up\nSecond synthetic history line`;
@@ -655,6 +659,7 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
     seedOwnedMedicalHistory(sql, provider, medicalHistory);
     browser = await chromium.launch(launchOptions);
     const context = await browser.newContext({ ignoreHTTPSErrors: shouldIgnoreHttpsErrors(), viewport: { width: 1440, height: 1600 } });
+    offlineBadge = await installOfflineCcBadge(context, process.env.EFORM_CC_BADGE_FIXTURE);
     const landingPage = await login(context);
     await landingPage.close();
 
@@ -716,12 +721,14 @@ async function openConsultAttachmentPanelAndAttachEform(page, fdid) {
         && /Failed to load resource.*404/i.test(issue.text || '')
         && issue.location && issue.location.url === `${baseUrl.origin}/favicon.ico`));
     assert(renderConsoleIssues.length === 0, `unexpected render-surface browser console failures: ${JSON.stringify(renderConsoleIssues, null, 2)}`);
+    if (offlineBadge) offlineBadge.assertUsed();
 
     console.log('PASS eForm consultation acceptance workflow preserved saved values, reopened the saved fdid, and reused that same saved eForm in the consultation attachment workflow');
     if (libraryRuntimeProbe) console.log(`PASS stored library form ${libraryEformName} rendered both exact background images from its template`);
     console.log(`Imported fid=${importedFid}, saved fdid=${fdid}, consultation request id=n/a (consultation attachment fallback), library fid=${libraryFid}, library runtime probe=${JSON.stringify(libraryRuntimeProbe)}, synthetic background responses=${JSON.stringify(syntheticBackgroundResponses)}`);
     console.log(`Screenshots written under ${screenshotDir}`);
   } finally {
+    if (offlineBadge) console.log(`Offline CC badge fixture receipt: ${JSON.stringify(offlineBadge.receipt())}`);
     if (managerPage && !managerPage.isClosed()) {
       await managerPage.close().catch(() => {});
     }
