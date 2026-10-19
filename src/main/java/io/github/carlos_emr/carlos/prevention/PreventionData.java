@@ -237,8 +237,13 @@ public class PreventionData {
         try {
             List<PreventionExt> preventionExts = preventionExtDao.findByKeyAndValue(extKey, extVal);
             for (PreventionExt preventionExt : preventionExts) {
-                Map<String, Object> hash = getPreventionById(preventionDao.find(preventionExt.getPreventionId()).toString());
-                if (hash.get("deleted") != null && ((String) hash.get("deleted")).equals("0")) {
+                // Pass the identifier, never the entity's reflection-based toString(): parsing that
+                // clinical content as an id both hid the RH injections and wrote it into an error log.
+                Integer preventionId = preventionExt.getPreventionId();
+                if (preventionId == null) continue;
+                Map<String, Object> hash = getPreventionById(preventionId.toString());
+                // An old extension can outlive its prevention. It must not hide later live records.
+                if (hash != null && "0".equals(hash.get("deleted"))) {
                     list.add(hash);
                 }
             }

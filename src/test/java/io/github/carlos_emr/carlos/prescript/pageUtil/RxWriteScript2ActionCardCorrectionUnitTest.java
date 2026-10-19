@@ -43,6 +43,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -288,6 +289,47 @@ class RxWriteScript2ActionCardCorrectionUnitTest extends CarlosUnitTestBase {
     }
 
     @Nested
+    @DisplayName("pick-up fields")
+    class PickupFields {
+
+        @ParameterizedTest
+        @CsvSource({"pickupDate_1, 2026-02-30, DATE", "pickupDate_1, tomorrow, DATE",
+                "pickupTime_1, 24:00, TIME", "pickupTime_1, 12:60, TIME", "pickupTime_1, noon, TIME"})
+        void shouldRefuseInvalidPickup_beforeChangingAnyCard(String field, String value, String error) throws Exception {
+            request.setParameter("drugName_1", "CHANGED NAME");
+            request.setParameter(field, value);
+            request.setParameter("draftRevision_1", card.getDraftRevision());
+            action = spy(action);
+
+            assertThat(action.updateSaveAllDrugs()).isEqualTo(RxWriteScript2Action.NONE);
+
+            assertThat(response.getStatus()).isEqualTo(400);
+            assertThat(response.getContentAsString()).contains("INVALID_RX_PICKUP_" + error);
+            assertThat(card.getBrandName()).isEqualTo("SYNTHETIC DRUG");
+            verify(action, never()).persistStash(any(), any());
+        }
+
+        @Test
+        void shouldSavePickup_whenValidOrCleared() throws Exception {
+            request.setParameter("drugName_1", "SYNTHETIC DRUG");
+            request.setParameter("pickupDate_1", "2028-02-29");
+            request.setParameter("pickupTime_1", "12:30");
+            request.setParameter("draftRevision_1", card.getDraftRevision());
+            action = spy(action);
+            doReturn("9001").when(action).persistStash(mockLoggedInInfo, bean);
+
+            assertThat(action.updateSaveAllDrugs()).isEqualTo("refresh");
+            assertThat(io.github.carlos_emr.carlos.prescript.util.RxUtil.DateToString(card.getPickupDate(), "yyyy-MM-dd HH:mm"))
+                    .isEqualTo("2028-02-29 12:30");
+
+            request.setParameter("pickupDate_1", "");
+            request.setParameter("pickupTime_1", "");
+            assertThat(action.updateSaveAllDrugs()).isEqualTo("refresh");
+            assertThat(card.getPickupDate()).isNull();
+        }
+    }
+
+    @Nested
     @DisplayName("saving an acknowledged card again (#5005)")
     class CorrectedSave {
 
@@ -295,6 +337,9 @@ class RxWriteScript2ActionCardCorrectionUnitTest extends CarlosUnitTestBase {
 
         @BeforeEach
         void persistAssignsIds() {
+            var transactionManager = org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class);
+            when(transactionManager.getTransaction(any())).thenReturn(new org.springframework.transaction.support.SimpleTransactionStatus());
+            registerMock(org.springframework.transaction.PlatformTransactionManager.class, transactionManager);
             doAnswer(invocation -> {
                 Drug saved = invocation.getArgument(0);
                 saved.setId(nextDrugIds.removeFirst());
@@ -365,6 +410,23 @@ class RxWriteScript2ActionCardCorrectionUnitTest extends CarlosUnitTestBase {
         }
 
         @Test
+        void shouldRefuseCorrection_whenReasonWriteIsRefused() {
+            save();
+            logActionMock.reset();
+            var reasons = org.mockito.Mockito.mock(io.github.carlos_emr.carlos.commn.dao.DrugReasonDao.class);
+            registerMock(io.github.carlos_emr.carlos.commn.dao.DrugReasonDao.class, reasons);
+            card.setDrugReasonCodeSystem("icd9");
+            card.setDrugReasonCode("401");
+            try (var codes = mockConstruction(io.github.carlos_emr.carlos.managers.CodingSystemManager.class,
+                    (mock, context) -> when(mock.isCodeAvailable(anyString(), anyString())).thenReturn(true))) {
+                assertThatThrownBy(this::save).isInstanceOf(RxWriteScript2Action.PrescriptionSaveException.class);
+            }
+            assertThat(card.getDrugId()).isEqualTo(501);
+            assertThat(card.getScript_no()).isEqualTo("77");
+            logActionMock.verifyNoInteractions();
+        }
+
+        @Test
         @DisplayName("should report an incomplete save when the earlier row cannot be archived")
         void shouldReportIncompleteSave_whenEarlierRowCannotBeArchived() {
             save();
@@ -372,6 +434,15 @@ class RxWriteScript2ActionCardCorrectionUnitTest extends CarlosUnitTestBase {
             when(mockRxManager.archiveDrug(any(), eq(501), anyInt(), anyString())).thenReturn(false);
 
             assertThatThrownBy(this::save).isInstanceOf(RxWriteScript2Action.PrescriptionSaveException.class);
+            assertThat(card.getDrugId()).isEqualTo(501);
+            assertThat(card.getScript_no()).isEqualTo("77");
+            assertThat(bean.getRandomIdDrugIdPair().get(card.getRandomId())).isEqualTo(501);
+
+            // The retry must still replace 501, not the rolled-back 502.
+            when(mockRxManager.archiveDrug(mockLoggedInInfo, 501, DEMOGRAPHIC_NO, Drug.REPRESCRIBED)).thenReturn(true);
+            assertThat(save()).isEqualTo("77");
+            assertThat(card.getDrugId()).isEqualTo(503);
+            verify(mockRxManager, never()).archiveDrug(any(), eq(502), anyInt(), anyString());
         }
     }
 }
