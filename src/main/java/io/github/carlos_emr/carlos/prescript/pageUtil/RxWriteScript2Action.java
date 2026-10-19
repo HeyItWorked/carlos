@@ -1088,20 +1088,25 @@ public final class RxWriteScript2Action extends ActionSupport {
     private String updateDrugLocked(RxSessionBean bean) throws IOException {
         String action = request.getParameter("action");
         response.setContentType("application/json");
+        if (!"parseInstructions".equals(action) && !"updateQty".equals(action)) {
+            return null;
+        }
+        RxPrescriptionData.Prescription rx = stagedCard(bean, request.getParameter("randomId"));
+        if (rx == null) {
+            // Another Rx window may discard this card while its blur calculation is in flight.
+            // Nothing remains to calculate; report the conflict without logging clinical input.
+            response.sendError(HttpServletResponse.SC_CONFLICT);
+            return NONE;
+        }
+        int randomId = (int) rx.getRandomId();
 
         if ("parseInstructions".equals(action)) {
 
             try {
-                String randomId = request.getParameter("randomId");
-                RxPrescriptionData.Prescription rx = bean.getStashItem2(Integer.parseInt(randomId));
-                if (rx == null) {
-                    logger.error("prescript is null", new NullPointerException());
-                }
-
                 String instructions = request.getParameter("instruction");
                 rx.setSpecial(instructions);
                 RxUtil.instrucParser(rx);
-                bean.setStashItem(bean.getIndexFromRx(Integer.parseInt(randomId)), rx);
+                bean.setStashItem(bean.getIndexFromRx(randomId), rx);
 
                 HashMap<String, Object> hm = new HashMap<String, Object>();
 
@@ -1130,8 +1135,6 @@ public final class RxWriteScript2Action extends ActionSupport {
 
             try {
                 String quantity = request.getParameter("quantity");
-                String randomId = request.getParameter("randomId");
-                RxPrescriptionData.Prescription rx = bean.getStashItem2(Integer.parseInt(randomId));
                 // get prescript from randomId
                 if (quantity == null || quantity.equalsIgnoreCase("null")) {
                     quantity = "";
@@ -1186,7 +1189,7 @@ public final class RxWriteScript2Action extends ActionSupport {
                     // if not, recalculate duration based on frequency if frequency is not empty
                     // if there is already a duration uni present, use that duration unit. if not, set duration unit to days, and output duration in days
                 }
-                bean.setStashItem(bean.getIndexFromRx(Integer.parseInt(randomId)), rx);
+                bean.setStashItem(bean.getIndexFromRx(randomId), rx);
 
                 if (rx.getRoute() == null) {
                     rx.setRoute("");

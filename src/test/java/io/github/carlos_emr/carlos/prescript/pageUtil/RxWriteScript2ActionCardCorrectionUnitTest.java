@@ -32,6 +32,7 @@ import io.github.carlos_emr.carlos.managers.PrescriptionSignatureStampService;
 import io.github.carlos_emr.carlos.managers.RxManager;
 import io.github.carlos_emr.carlos.managers.SecurityInfoManager;
 import io.github.carlos_emr.carlos.prescript.data.RxPrescriptionData;
+import io.github.carlos_emr.carlos.test.logging.LogCapture;
 import io.github.carlos_emr.carlos.test.unit.CarlosUnitTestBase;
 import io.github.carlos_emr.carlos.utility.LoggedInInfo;
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,8 +54,12 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -70,6 +75,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -174,6 +180,108 @@ class RxWriteScript2ActionCardCorrectionUnitTest extends CarlosUnitTestBase {
         }
         if (mocks != null) {
             mocks.close();
+        }
+    }
+
+    @Nested
+    @DisplayName("discarded-card calculation callbacks (#5036)")
+    class DiscardedCalculation {
+
+        @ParameterizedTest
+        @ValueSource(strings = {"updateQty", "parseInstructions"})
+        @DisplayName("should refuse a delayed calculation after another window deletes its card")
+        void shouldRejectCallback_afterConcurrentCardDeletion(String calculation) throws Exception {
+            request.setParameter("action", calculation);
+            request.setParameter("randomId", "1");
+            request.setParameter("quantity", "42");
+            request.setParameter("instruction", "Synthetic confidential directions");
+            var control = new RxPrescriptionData.Prescription(88, "999998", DEMOGRAPHIC_NO);
+            control.setRandomId(2);
+            control.setSpecial("Untouched synthetic instructions");
+            control.setQuantity("17");
+            String revision = control.getDraftRevision();
+            bean.getStashList().add(control);
+            var callbackEntered = new CountDownLatch(1);
+            var deletionCompleted = new CountDownLatch(1);
+            doAnswer(invocation -> {
+                callbackEntered.countDown();
+                assertThat(deletionCompleted.await(5, TimeUnit.SECONDS)).isTrue();
+                return true;
+            }).when(mockSecurityInfoManager).hasPrivilege(any(LoggedInInfo.class), eq("_rx"), eq("w"), isNull());
+
+            try (var worker = Executors.newSingleThreadExecutor();
+                    LogCapture capture = LogCapture.forLogger(RxWriteScript2Action.class)) {
+                var deletion = worker.submit(() -> {
+                    assertThat(callbackEntered.await(5, TimeUnit.SECONDS)).isTrue();
+                    // The second window removes the same draft while this callback is delayed.
+                    synchronized (bean) {
+                        bean.removeStashItem(bean.getIndexFromRx(1));
+                    }
+                    deletionCompleted.countDown();
+                    return null;
+                });
+                String result = action.updateDrug();
+                deletion.get(5, TimeUnit.SECONDS);
+
+                assertThat(response.getStatus()).isEqualTo(409);
+                assertThat(result).isEqualTo(RxWriteScript2Action.NONE);
+                assertThat(response.getContentAsString()).doesNotContain("Synthetic confidential directions");
+                assertThat(capture.events()).isEmpty();
+                assertThat(bean.getStash()).containsExactly(control);
+                assertThat(control.getDrugId()).isEqualTo(88);
+                assertThat(control.getSpecial()).isEqualTo("Untouched synthetic instructions");
+                assertThat(control.getQuantity()).isEqualTo("17");
+                assertThat(control.getDraftRevision()).isEqualTo(revision);
+                verifyNoInteractions(mockRxManager, mockDrugDao, mockPartialDateDao, mockSignatureStampService);
+            }
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"updateQty", "parseInstructions"})
+        @DisplayName("should refuse unknown and malformed calculation keys without a server error")
+        void shouldRefuseCalculation_whenCardKeyIsUnknownOrMalformed(String calculation) throws Exception {
+            request.setParameter("action", calculation);
+            request.setParameter("quantity", "42");
+            request.setParameter("instruction", "Synthetic confidential directions");
+            for (String key : Arrays.asList(null, "", "bad", "-1", "9999999999", "0", "99")) {
+                response = new MockHttpServletResponse();
+                servletActionContextMock.when(ServletActionContext::getResponse).thenReturn(response);
+                action = new RxWriteScript2Action(mockSignatureStampService);
+                if (key == null) request.removeParameter("randomId");
+                else request.setParameter("randomId", key);
+                try (LogCapture capture = LogCapture.forLogger(RxWriteScript2Action.class)) {
+                    String result = action.updateDrug();
+                    assertThat(response.getStatus()).as(key).isEqualTo(409);
+                    assertThat(result).isEqualTo(RxWriteScript2Action.NONE);
+                    assertThat(capture.events()).isEmpty();
+                }
+                assertThat(bean.getStash()).containsExactly(card);
+                assertThat(card.getSpecial()).isEqualTo("1 tab PO OD");
+                assertThat(card.getQuantity()).isEqualTo("30");
+            }
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"updateQty", "parseInstructions"})
+        @DisplayName("should calculate a current card normally")
+        void shouldCalculate_whenCardStillExists(String calculation) throws Exception {
+            card.setFrequencyCode("OD");
+            card.setDuration("30");
+            card.setDurationUnit("D");
+            request.setParameter("action", calculation);
+            request.setParameter("randomId", "1");
+            request.setParameter("quantity", "42");
+            request.setParameter("instruction", "1 tab PO BID x 14 days");
+
+            assertThat(action.updateDrug()).isNull();
+            assertThat(response.getStatus()).isEqualTo(200);
+            assertThat(response.getContentAsString()).contains("calQuantity");
+            assertThat(card.getQuantity()).isEqualTo("updateQty".equals(calculation) ? "42" : "28");
+            if ("parseInstructions".equals(calculation)) {
+                assertThat(card.getSpecial()).isEqualTo("1 tab PO BID x 14 days");
+                assertThat(card.getFrequencyCode()).isEqualTo("BID");
+            }
+            verifyNoInteractions(mockRxManager, mockDrugDao, mockPartialDateDao, mockSignatureStampService);
         }
     }
 
