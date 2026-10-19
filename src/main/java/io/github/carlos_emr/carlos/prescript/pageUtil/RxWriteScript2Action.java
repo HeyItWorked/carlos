@@ -2060,7 +2060,7 @@ public final class RxWriteScript2Action extends ActionSupport {
                 return null;
             }
             try {
-                if (bean.getStash().stream().anyMatch(card -> card.getDrugId() > 0)) {
+                if (Arrays.stream(bean.getStash()).anyMatch(card -> card.getDrugId() > 0)) {
                     return persistCorrection(loggedInInfo, bean);
                 }
                 return persistStashLocked(loggedInInfo, bean);
@@ -2078,10 +2078,10 @@ public final class RxWriteScript2Action extends ActionSupport {
                 card.restoreSavedIdentity(drugId, scriptNo);
             }
         }
-        List<PreviousIdentity> previous = bean.getStash().stream()
+        List<PreviousIdentity> previous = Arrays.stream(bean.getStash())
                 .map(card -> new PreviousIdentity(card, card.getDrugId(), card.getScript_no())).toList();
         HashMap previousPairs = new HashMap(bean.getRandomIdDrugIdPair());
-        List<String> previousReRx = new ArrayList<>(bean.getReRxDrugIdList());
+        var previousReRx = new java.util.concurrent.CopyOnWriteArrayList<>(bean.getReRxDrugIdList());
         try {
             var transaction = new org.springframework.transaction.support.TransactionTemplate(
                     SpringUtils.getBean(org.springframework.transaction.PlatformTransactionManager.class));
