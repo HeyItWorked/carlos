@@ -404,7 +404,9 @@ test('medication comments follow natural DOM order without positive tab indices'
   const p = page();
   const preceding = p.form['value(MedRComments)'];
   const comments = p.form['value(MedAComments)'];
-  assert(p.form.elements.every(element => !element.attrs.tabindex || Number(element.attrs.tabindex) <= 0));
+  for (const element of p.form.elements) {
+    assert(!element.attrs.tabindex || Number(element.attrs.tabindex) <= 0, `Positive tabindex on ${element.name}`);
+  }
   assert.equal(comments.attrs.tabindex, preceding.attrs.tabindex);
   assert.equal(Object.hasOwn(comments.attrs, 'abindex'), false);
   assert(p.form.elements.indexOf(comments) > p.form.elements.indexOf(preceding));

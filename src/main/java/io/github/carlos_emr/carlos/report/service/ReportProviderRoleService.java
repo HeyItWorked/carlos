@@ -12,7 +12,11 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Validated role administration for the PHCP report's provider settings. */
+/**
+ * Validated role administration for the PHCP report's provider settings.
+ *
+ * @since 2026-10-17
+ */
 @Service
 public class ReportProviderRoleService {
     public static final List<String> CLINICAL_ROLES = List.of("doctor", "resident", "nurse", "social worker", "other");

@@ -76,7 +76,7 @@ test('Save Only requests atomic cleanup and never clears the shared stash afterw
     const calls = [];
     let cleared = 0;
     const context = {
-        validateWrittenDate: () => true, validateRxDate: () => true,
+        validateWrittenDate: () => true, validateRxDate: () => true, validateCardProperties: () => true,
         setPharmacyId() {}, ctx: '/carlos',
         document: { getElementById: () => ({}) },
         FormData: class { delete() {} }, URLSearchParams: class { toString() { return 'drugName_42=draft'; } },
@@ -108,7 +108,7 @@ for (const name of ['updateSaveAllDrugsPrintContinue', 'updateSaveAllDrugsContin
         const form = {};
         const calls = [];
         const context = {
-            validateWrittenDate: () => true, validateRxDate: () => true,
+            validateWrittenDate: () => true, validateRxDate: () => true, validateCardProperties: () => true,
             setPharmacyId() {}, ctx: '/carlos',
             document: { getElementById(id) { assert.equal(id, 'drugForm'); return form; } },
             FormData: class extends URLSearchParams {
@@ -130,5 +130,50 @@ for (const name of ['updateSaveAllDrugsPrintContinue', 'updateSaveAllDrugsContin
         if (name === 'updateSaveAllDrugsContinue') expected.push(['clearSaved', 'true']);
         assert.deepEqual([...posted], expected);
         assert.equal(fields[0][1], 'http://10.0.0.5/pacs/study', 'the search box is not cleared by serialization');
+    });
+}
+
+// The unstaged-ReRx warning's first sentence is each locale's key as it is: the page used to put an
+// English "There " in front of it (#4894). The count goes in by replacing the key's literal {0}.
+function bundle(locale) {
+    const text = fs.readFileSync(
+        path.join(__dirname, `../src/main/resources/oscarResources_${locale}.properties`), 'utf8');
+    const values = {};
+    for (const line of text.split('\n')) {
+        const match = /^SearchDrug\.js\.(\w+)=(.*)$/.exec(line);
+        if (match) values[match[1]] = match[2].replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    }
+    return values;
+}
+
+const confirmationMessage = slice('const CONFIRMATION_MESSAGE', '<%--');
+for (const [locale, one, two, five] of [
+    ['en', 'There is 1 unstaged ReRx drug.', 'There are 2 unstaged ReRx drugs.', 'There are 5 unstaged ReRx drugs.'],
+    ['fr', 'Il y a 1 médicament ReRx non ajouté.', 'Il y a 2 médicaments ReRx non ajoutés.', 'Il y a 5 médicaments ReRx non ajoutés.'],
+    ['es', 'Hay 1 medicamento ReRx sin agregar.', 'Hay 2 medicamentos ReRx sin agregar.', 'Hay 5 medicamentos ReRx sin agregar.'],
+    ['pt_BR', 'Há 1 medicamento ReRx não adicionado.', 'Há 2 medicamentos ReRx não adicionados.', 'Há 5 medicamentos ReRx não adicionados.'],
+    // Polish plural forms change at 5, so the count-taking sentence avoids them.
+    ['pl', 'Jest 1 nieprzetworzona recepta ReRx.', 'Liczba nieprzetworzonych recept ReRx: 2.', 'Liczba nieprzetworzonych recept ReRx: 5.'],
+]) {
+    test(`the unstaged-ReRx warning is a whole ${locale} sentence for 1, 2 and 5 drugs`, () => {
+        const jsMsg = bundle(locale);
+        for (const [count, sentence] of [[1, one], [2, two], [5, five]]) {
+            const message = vm.runInNewContext(`${confirmationMessage}\nbuildConfirmationMessage(${count});`,
+                { jsMsg, selectedReRxIDs: [] });
+            assert.deepEqual(message.split('\n'), [sentence, jsMsg.saveWarning, jsMsg.savePrompt]);
+        }
+    });
+}
+
+for (const name of ['updateSaveAllDrugsPrintContinue', 'updateSaveAllDrugsContinue']) {
+    test(`${name} cannot save an older staged value while an inline edit is refused`, () => {
+        const code = (name === 'updateSaveAllDrugsPrintContinue'
+            ? slice('function updateSaveAllDrugsPrintContinue(', 'function updateSaveAllDrugsContinue(')
+            : slice('function updateSaveAllDrugsContinue(', '/**'))
+            .replace(/<%if \(CarlosProperties[\s\S]*?<%}%>/, '');
+        const context = { validateCardProperties: () => false };
+        // Any validation, serialization or request after the rejected edit would fail here.
+        vm.runInNewContext(code, context);
+        assert.equal(context[name](), false);
     });
 }

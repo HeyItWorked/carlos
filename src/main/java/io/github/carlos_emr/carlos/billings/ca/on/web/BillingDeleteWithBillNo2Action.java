@@ -118,12 +118,15 @@ public class BillingDeleteWithBillNo2Action extends ActionSupport {
             }
         }
 
-        if (billCode == null || billCode.isEmpty() || billCode.startsWith("B")) {
-            return "cannotDelete";
-        }
-
+        // No bill identified, so there is nothing to replace. A new bill's form posts billStatus_old as an
+        // empty string, which the status check below would refuse, and BillingOnSave2Action treats anything
+        // but success as a failed replacement and rolls the new bill back.
         if (billNo.isEmpty() || "null".equals(billNo)) {
             return SUCCESS;
+        }
+
+        if (billCode == null || billCode.isEmpty() || billCode.startsWith("B")) {
+            return "cannotDelete";
         }
 
         CarlosProperties props = CarlosProperties.getInstance();

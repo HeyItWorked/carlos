@@ -172,7 +172,6 @@ class BillingOnSave2ActionUnitTest extends CarlosUnitTestBase {
         when(mockSaveService.saveBillingWithExtAndPayee(any(BillingClaimSubmissionService.BillingClaimSubmission.class),
                 any(), anyString(), any())).thenReturn(new BillingClaimSubmissionService.SaveResult(true, 4321));
         when(mockSaveService.getApptStatus("880")).thenReturn("t");
-        when(mockSaveService.updateApptStatus(eq("880"), any(), eq("999998"))).thenReturn(true);
         when(mockSaveService.updateApptStatus(eq("880"), any(), eq("999998")))
                 .thenThrow(new IllegalStateException("Synthetic appointment write failure")).thenReturn(true);
 
@@ -315,6 +314,35 @@ class BillingOnSave2ActionUnitTest extends CarlosUnitTestBase {
         // Single transactional call now drives header + items + ext + payee.
         verify(mockSaveService).saveBillingWithExtAndPayee(any(BillingClaimSubmissionService.BillingClaimSubmission.class),
                 eq(mockRequest), eq("PAT"), eq("Acme Payee"));
+    }
+
+    @Test
+    @DisplayName("a new bill saves when the form posts its old-bill fields empty, as billingON.jsp does")
+    void shouldSaveNewBill_whenOldBillFieldsPostEmpty() {
+        mockRequest.setParameter("appointment_no", "");
+        mockRequest.setParameter("url_back", "");
+        mockRequest.setParameter("billingAction", "SAVE");
+        mockRequest.setParameter("xml_billtype", "PAT");
+        mockRequest.setParameter("payeename", "Acme Payee");
+        mockRequest.setParameter("billNo_old", "");
+        mockRequest.setParameter("billStatus_old", "");
+        mockRequest.setParameter("curBillForm", "ON");
+
+        BillingClaimSubmissionService.BillingClaimSubmission submission =
+                new BillingClaimSubmissionService.BillingClaimSubmission(
+                        new io.github.carlos_emr.carlos.billings.ca.on.dto.BillingClaimHeaderDto(),
+                        java.util.List.of());
+        when(mockSaveService.getSubmission(mockRequest)).thenReturn(submission);
+        when(mockSaveService.saveBillingWithExtAndPayee(any(BillingClaimSubmissionService.BillingClaimSubmission.class),
+                eq(mockRequest), eq("PAT"), eq("Acme Payee")))
+                .thenReturn(new BillingClaimSubmissionService.SaveResult(true, 4321));
+        when(mockUserPropertyDao.getProp("999998", UserProperty.WORKLOAD_MANAGEMENT)).thenReturn(null);
+
+        String result = newAction().execute();
+
+        assertThat(result).isEqualTo(ActionSupport.SUCCESS);
+        assertThat(mockRequest.getAttribute("billingNo")).isEqualTo(4321);
+        assertThat(mockRequest.getAttribute("billingFailureReason")).isNull();
     }
 
     @Test

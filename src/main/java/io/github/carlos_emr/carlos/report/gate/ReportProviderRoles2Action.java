@@ -13,7 +13,11 @@ import java.util.ResourceBundle;
 import org.apache.struts2.ActionSupport;
 import org.apache.struts2.ServletActionContext;
 
-/** Read-only report access never grants permission to change provider security roles. */
+/**
+ * Read-only report access never grants permission to change provider security roles.
+ *
+ * @since 2026-10-17
+ */
 public class ReportProviderRoles2Action extends ActionSupport {
     private final SecurityInfoManager security = SpringUtils.getBean(SecurityInfoManager.class);
     private final ReportProviderRoleService roles = SpringUtils.getBean(ReportProviderRoleService.class);

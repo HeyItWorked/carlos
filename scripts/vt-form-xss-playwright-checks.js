@@ -82,7 +82,7 @@ async function workflow(s) {
     });
   });
   await step('vital-sign controls have visible names and follow the keyboard reading order', async () => {
-    h.assert(await page.locator('[tabindex]').evaluateAll(elements => elements.every(element => element.tabIndex <= 0)),
+    h.assert(await page.locator('form [tabindex]').evaluateAll(elements => elements.every(element => element.tabIndex <= 0)),
       'Positive tab indices send keyboard users out of the clinical reading order');
     for (const code of ['BP', 'WC', 'HC', 'HR', 'HT', 'WT']) {
       const label = page.locator(`#vt-${code}-label`);

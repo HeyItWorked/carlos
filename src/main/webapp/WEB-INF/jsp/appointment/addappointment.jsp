@@ -988,7 +988,11 @@ Ontario, Canada
             function locale() {
                 // add style for multisites location
                 var loc = document.forms['ADDAPPT'].location;
-                if (loc.nodeName.toUpperCase() == 'SELECT') loc.style.backgroundColor = loc.options[loc.selectedIndex].style.backgroundColor;
+                if (loc && loc.nodeName.toUpperCase() === 'SELECT') {
+                    var selectedLocation = loc.options[loc.selectedIndex];
+                    // A provider may have no active site assignments; initialization must continue.
+                    if (selectedLocation) loc.style.backgroundColor = selectedLocation.style.backgroundColor;
+                }
             }
 
         </script>
@@ -1284,7 +1288,7 @@ Ontario, Canada
                                 %>
                                 <select tabindex="4" class="form-select form-select-sm" name="location"
                                         style="background-color: <%=safeColoAttr%>"
-                                        onchange='this.style.backgroundColor=this.options[this.selectedIndex].style.backgroundColor'>
+                                        onchange='locale()'>
                                     <% for (Site s : sites) {
                                         String safeBgColorAttr = (s.getBgColor() != null && cssColorPattern.matcher(s.getBgColor()).matches()) ? SafeEncode.forHtmlAttribute(s.getBgColor()) : "";
                                     %>

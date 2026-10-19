@@ -226,15 +226,18 @@ async function workflow(s) {
   await s.step('a report reader cannot change a provider role with a valid CSRF token', async () => {
     const role = roleFixture.addRole({ _appointment: 'w', _report: 'r', '_admin.reporting': 'r' });
     const restricted = await signIn(s, roleFixture.addLogin(role));
-    const token = await sessionToken(restricted.page, s.config.baseUrl);
-    const response = await restricted.context.request.post(h.appUrl(s.config.baseUrl, '/report/ViewReportonbilledvisitprovider'), {
-      form: { buttonUpdate: 'Update', providerId: nurse, [`name${nurse}`]: 'doctor', 'CSRF-TOKEN': token }, maxRedirects: 0,
-    });
-    h.assert(response.status() === 403 && Object.hasOwn(response.headers(), 'x-permitted-cross-domain-policies'),
-      'The report reader was not refused by the application');
-    h.assert(sql.value(`SELECT GROUP_CONCAT(role_name) FROM secUserRole WHERE provider_no=${q(nurse)}`) === 'nurse',
-      'A report reader changed the stored role');
-    await restricted.context.close();
+    try {
+      const token = await sessionToken(restricted.page, s.config.baseUrl);
+      const response = await restricted.context.request.post(h.appUrl(s.config.baseUrl, '/report/ViewReportonbilledvisitprovider'), {
+        form: { buttonUpdate: 'Update', providerId: nurse, [`name${nurse}`]: 'doctor', 'CSRF-TOKEN': token }, maxRedirects: 0,
+      });
+      h.assert(response.status() === 403 && Object.hasOwn(response.headers(), 'x-permitted-cross-domain-policies'),
+        'The report reader was not refused by the application');
+      h.assert(sql.value(`SELECT GROUP_CONCAT(role_name) FROM secUserRole WHERE provider_no=${q(nurse)}`) === 'nurse',
+        'A report reader changed the stored role');
+    } finally {
+      await restricted.context.close();
+    }
   });
 
   let phcp;
@@ -403,9 +406,10 @@ async function workflow(s) {
     h.assert(apptSnapshot() === apptsBefore, 'Roster filtering changed appointment status');
   });
   await s.step('sorting keeps the Non Rostered filter and time window', async () => {
+    let sheet = null;
     try {
       sql.execute(`UPDATE demographic SET roster_status='NR' WHERE demographic_no=${patient}`);
-      const sheet = await daySheet('day sheet non-rostered sort', { providerNo: provider, nonRostered: true });
+      sheet = await daySheet('day sheet non-rostered sort', { providerNo: provider, nonRostered: true });
       const labels = await sheet.locator('thead a').allTextContents();
       for (const label of labels) {
         await Promise.all([sheet.waitForNavigation({ waitUntil: 'domcontentloaded' }),
@@ -421,9 +425,10 @@ async function workflow(s) {
       sql.execute(`UPDATE demographic SET roster_status='RO' WHERE demographic_no=${patient}`);
       await sheet.reload({ waitUntil: 'domcontentloaded' });
       h.assert((await listed(sheet)).length === 0, 'A sorted Non Rostered sheet included the now-rostered patient');
-      await sheet.close();
     } finally {
       sql.execute(`UPDATE demographic SET roster_status='RO' WHERE demographic_no=${patient}`);
+      // Close the popup whether or not an assertion failed, so a failure does not leave it open.
+      if (sheet && !sheet.isClosed()) await sheet.close().catch(() => {});
     }
   });
   await s.step('sorting a time-windowed day sheet keeps its time window', async () => {

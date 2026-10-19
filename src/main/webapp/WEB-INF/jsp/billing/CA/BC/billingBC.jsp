@@ -231,9 +231,7 @@
         defaultBillingForm = bean.getBillForm();
     }
 
-    if (billform.serviceExists(defaultBillingForm)) {
-        bean.setBillForm(defaultBillingForm);
-    }
+    bean.setBillForm(billform.resolveBillingForm(defaultBillingForm));
 
     // 1. global default billing visit location: carlos properties
     String defaultServiceLocation = CarlosProperties.getInstance().getProperty("visittype");
@@ -1328,7 +1326,7 @@
     <div class="action-errors">
         <ul>
             <% for (String error : actionErrors) { %>
-                <li><%= error %></li>
+                <li><%= SafeEncode.forHtmlContent(error) %></li>
             <% } %>
         </ul>
     </div>
@@ -1451,7 +1449,7 @@
                                                  table in place without changing the window's staged bill (#4673). --%>
                                             <select class="form-select" id="selectBillingForm" name="billForm">
                                                 <% for (int i = 0; i < billformlist.length; i++) { %>
-                                                <option <% if (bean.getBillForm().equalsIgnoreCase(billformlist[i].getFormCode())) {%>
+                                                <option <% if (billformlist[i].getFormCode().equalsIgnoreCase(bean.getBillForm())) {%>
                                                         selected
                                                         <% } %>
                                                         value="<carlos:encode value='<%= billformlist[i].getFormCode() %>' context="htmlAttribute"/>">

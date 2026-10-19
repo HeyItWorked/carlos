@@ -660,6 +660,7 @@
     <form action="${pageContext.request.contextPath}/form/SubmitForm" method="post">
         <span id="vt-comments-label" class="vt-screen-reader-only"><fmt:message key="encounter.oscarMeasurements.Measurements.headingComments"/></span>
         <span id="vt-new-data-label" class="vt-screen-reader-only"><fmt:message key="form.vt.newData"/></span>
+        <span id="vt-ob-date-label" class="vt-screen-reader-only"><fmt:message key="form.vt.obDate"/></span>
         <link rel="stylesheet" type="text/css"
               href="<%= request.getContextPath() %>/encounter/oscarMeasurements/styles/measurementStyle.css">
         <link rel="stylesheet" type="text/css" media="print" href="form/print.css"/>
@@ -920,7 +921,7 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable">${carlos:forHtml(ExerDesc)}
+                                                    <td class="dataEntryTable"><span id="vt-Exer-label">${carlos:forHtml(ExerDesc)}</span>
                                                         <span class="eightyPercent"><carlos:encode value="${requestScope.ExerMeasuringInstrc}"/>
                                                         </span></td>
                                                     <td class="dataEntryTable" align="center">
@@ -942,11 +943,11 @@
                                                     </td>
                                                     <input type="hidden" name="value(ExerDate)" id="value(ExerDate)"/>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(ExerComments)" size="30%" />
+                                                        <input id="vt-Exer-comments" aria-labelledby="vt-Exer-label vt-comments-label" type="text" name="value(ExerComments)" size="30%" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable">${carlos:forHtml(DietDesc)}
+                                                    <td class="dataEntryTable"><span id="vt-Diet-label">${carlos:forHtml(DietDesc)}</span>
                                                         <span class="eightyPercent"><carlos:encode value="${requestScope.DietMeasuringInstrc}"/>
                                                         </span></td>
                                                     <td class="dataEntryTable" align="center">
@@ -967,7 +968,7 @@
                                                         <input type="text" name="value(DietValue)" size="4%" /></td>
                                                     <input type="hidden" name="value(DietDate)" id="value(DietDate)"/>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(DietComments)" size="30%" /></td>
+                                                        <input id="vt-Diet-comments" aria-labelledby="vt-Diet-label vt-comments-label" type="text" name="value(DietComments)" size="30%" /></td>
                                                 </tr>
                                             </table>
                                         </td>
@@ -1296,7 +1297,7 @@
                                                     </a></td>
                                                     <td class="dataEntryTable" align="center">
                                                         <input id="vt-WHRB-comments" aria-labelledby="vt-WHRB-label vt-comments-label" type="text" name="value(WHRBComments)" size="30%" /></td>
-                                                    </tr-->
+                                                    </tr>
 
 
                                                 <tr>
@@ -1840,7 +1841,7 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.HbA1Desc}"/><br>
+                                                    <td class="dataEntryTable"><span id="vt-HbA1-label"><carlos:encode value="${requestScope.HbA1Desc}"/></span><br>
                                                         <span class="eightyPercent"><carlos:encode value="${requestScope.HbA1MeasuringInstrc}"/>
                                                         </span></td>
                                                     <td class="dataEntryTable" align="center">
@@ -1861,14 +1862,14 @@
                                                         <input type="text" name="value(HbA1Value)" size="4%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(HbA1Date)" size="10%" />
+                                                        <input id="vt-HbA1-date" aria-labelledby="vt-HbA1-label vt-ob-date-label" type="text" name="value(HbA1Date)" size="10%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(HbA1Comments)" size="30%" />
+                                                        <input id="vt-HbA1-comments" aria-labelledby="vt-HbA1-label vt-comments-label" type="text" name="value(HbA1Comments)" size="30%" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.LDLDesc}"/><br>
+                                                    <td class="dataEntryTable"><span id="vt-LDL-label"><carlos:encode value="${requestScope.LDLDesc}"/></span><br>
                                                         <span class="eightyPercent"><carlos:encode value="${requestScope.LDLMeasuringInstrc}"/>
                                                         </span></td>
                                                     <td class="dataEntryTable" align="center">
@@ -1889,13 +1890,13 @@
                                                         <input type="text" name="value(LDLValue)" size="4%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(LDLDate)" size="10%" />
+                                                        <input id="vt-LDL-date" aria-labelledby="vt-LDL-label vt-ob-date-label" type="text" name="value(LDLDate)" size="10%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(LDLComments)" size="30%" /></td>
+                                                        <input id="vt-LDL-comments" aria-labelledby="vt-LDL-label vt-comments-label" type="text" name="value(LDLComments)" size="30%" /></td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.HDLDesc}"/><br>
+                                                    <td class="dataEntryTable"><span id="vt-HDL-label"><carlos:encode value="${requestScope.HDLDesc}"/></span><br>
                                                         <span class="eightyPercent"><carlos:encode value="${requestScope.HDLMeasuringInstrc}"/>
                                                         </span></td>
                                                     <td class="dataEntryTable" align="center">
@@ -1916,14 +1917,14 @@
                                                         <input type="text" name="value(HDLValue)" size="4%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(HDLDate)" size="10%" />
+                                                        <input id="vt-HDL-date" aria-labelledby="vt-HDL-label vt-ob-date-label" type="text" name="value(HDLDate)" size="10%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(HDLComments)" size="30%" />
+                                                        <input id="vt-HDL-comments" aria-labelledby="vt-HDL-label vt-comments-label" type="text" name="value(HDLComments)" size="30%" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.TCHLDesc}"/><br>
+                                                    <td class="dataEntryTable"><span id="vt-TCHL-label"><carlos:encode value="${requestScope.TCHLDesc}"/></span><br>
                                                         <span class="eightyPercent"><carlos:encode value="${requestScope.TCHLMeasuringInstrc}"/>
                                                         </span></td>
                                                     <td class="dataEntryTable" align="center">
@@ -1944,10 +1945,10 @@
                                                         <input type="text" name="value(TCHLValue)" size="4%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(TCHLDate)" size="10%" />
+                                                        <input id="vt-TCHL-date" aria-labelledby="vt-TCHL-label vt-ob-date-label" type="text" name="value(TCHLDate)" size="10%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(TCHLComments)" size="30%" />
+                                                        <input id="vt-TCHL-comments" aria-labelledby="vt-TCHL-label vt-comments-label" type="text" name="value(TCHLComments)" size="30%" />
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -1956,7 +1957,7 @@
                                                                style="display: none" id="detailLab">
                                                             <tr>
                                                                 <td width="34%"
-                                                                    class="dataEntryTable"><carlos:encode value="${requestScope.TRIGDesc}"/>
+                                                                    class="dataEntryTable"><span id="vt-TRIG-label"><carlos:encode value="${requestScope.TRIGDesc}"/></span>
                                                                     <br>
                                                                     <span class="eightyPercent"><carlos:encode value="${requestScope.TRIGMeasuringInstrc}"/>
                                                                     </span></td>
@@ -1977,12 +1978,12 @@
                                                                 <td width="5%" class="dataEntryTable" align="center">
                                                                     <input type="text" name="value(TRIGValue)" size="4%"/></td>
                                                                 <td width="10%" class="dataEntryTable" align="center">
-                                                                    <input type="text" name="value(TRIGDate)" size="10%"/></td>
+                                                                    <input id="vt-TRIG-date" aria-labelledby="vt-TRIG-label vt-ob-date-label" type="text" name="value(TRIGDate)" size="10%"/></td>
                                                                 <td width="35%" class="dataEntryTable" align="center">
-                                                                    <input type="text" name="value(TRIGComments)" size="30%"/></td>
+                                                                    <input id="vt-TRIG-comments" aria-labelledby="vt-TRIG-label vt-comments-label" type="text" name="value(TRIGComments)" size="30%"/></td>
                                                             </tr>
                                                             <tr>
-                                                                <td class="dataEntryTable"><carlos:encode value="${requestScope.BGDesc}"/>
+                                                                <td class="dataEntryTable"><span id="vt-BG-label"><carlos:encode value="${requestScope.BGDesc}"/></span>
                                                                     <br>
                                                                     <span class="eightyPercent"><carlos:encode value="${requestScope.BGMeasuringInstrc}"/>
                                                                     </span></td>
@@ -2004,17 +2005,17 @@
                                                                     <input type="text" name="value(BGValue)" size="4%" />
                                                                 </td>
                                                                 <td class="dataEntryTable" align="center">
-                                                                    <input type="text" name="value(BGDate)" size="10%" />
+                                                                    <input id="vt-BG-date" aria-labelledby="vt-BG-label vt-ob-date-label" type="text" name="value(BGDate)" size="10%" />
                                                                 </td>
                                                                 <td class="dataEntryTable" align="center">
-                                                                    <input type="text" name="value(BGComments)" size="30%" />
+                                                                    <input id="vt-BG-comments" aria-labelledby="vt-BG-label vt-comments-label" type="text" name="value(BGComments)" size="30%" />
                                                                 </td>
                                                             </tr>
                                                         </table>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.UALBDesc}"/><br>
+                                                    <td class="dataEntryTable"><span id="vt-UALB-label"><carlos:encode value="${requestScope.UALBDesc}"/></span><br>
                                                         <span class="eightyPercent"><carlos:encode value="${requestScope.UALBMeasuringInstrc}"/>
                                                         </span></td>
                                                     <td class="dataEntryTable" align="center">
@@ -2035,14 +2036,14 @@
                                                         <input type="text" name="value(UALBValue)" size="4%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(UALBDate)" size="10%" />
+                                                        <input id="vt-UALB-date" aria-labelledby="vt-UALB-label vt-ob-date-label" type="text" name="value(UALBDate)" size="10%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(UALBComments)" size="30%" />
+                                                        <input id="vt-UALB-comments" aria-labelledby="vt-UALB-label vt-comments-label" type="text" name="value(UALBComments)" size="30%" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope['24UADesc']}"/><br>
+                                                    <td class="dataEntryTable"><span id="vt-24UA-label"><carlos:encode value="${requestScope['24UADesc']}"/></span><br>
                                                         <span class="eightyPercent"><carlos:encode value="${requestScope['24UAMeasuringInstrc']}"/>
                                                         </span></td>
                                                     <td class="dataEntryTable" align="center">
@@ -2063,10 +2064,10 @@
                                                         <input type="text" name="value(24UAValue)" size="4%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(24UADate)" size="10%" />
+                                                        <input id="vt-24UA-date" aria-labelledby="vt-24UA-label vt-ob-date-label" type="text" name="value(24UADate)" size="10%" />
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(24UAComments)" size="30%" />
+                                                        <input id="vt-24UA-comments" aria-labelledby="vt-24UA-label vt-comments-label" type="text" name="value(24UAComments)" size="30%" />
                                                     </td>
                                                 </tr>
                                             </table>
@@ -2196,7 +2197,7 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.NtrCDesc}"/>
+                                                    <td class="dataEntryTable"><span id="vt-NtrC-label"><carlos:encode value="${requestScope.NtrCDesc}"/></span>
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
                                                         <table cellpadding='0' cellspacing='0'>
@@ -2217,11 +2218,11 @@
                                                     </td>
                                                     <input type="hidden" name="value(NtrCDate)" id="value(NtrCDate)"/>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(NtrCComments)" size="45" />
+                                                        <input id="vt-NtrC-comments" aria-labelledby="vt-NtrC-label vt-comments-label" type="text" name="value(NtrCComments)" size="45" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.ExeCDesc}"/>
+                                                    <td class="dataEntryTable"><span id="vt-ExeC-label"><carlos:encode value="${requestScope.ExeCDesc}"/></span>
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
                                                         <table cellpadding='0' cellspacing='0'>
@@ -2242,11 +2243,11 @@
                                                     </td>
                                                     <input type="hidden" name="value(ExeCDate)" id="value(ExeCDate)"/>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(ExeCComments)" size="45" />
+                                                        <input id="vt-ExeC-comments" aria-labelledby="vt-ExeC-label vt-comments-label" type="text" name="value(ExeCComments)" size="45" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.SmCCDesc}"/>
+                                                    <td class="dataEntryTable"><span id="vt-SmCC-label"><carlos:encode value="${requestScope.SmCCDesc}"/></span>
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
                                                         <table cellpadding='0' cellspacing='0'>
@@ -2267,11 +2268,11 @@
                                                     </td>
                                                     <input type="hidden" name="value(SmCCDate)" id="value(SmCCDate)"/>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(SmCCComments)" size="45" />
+                                                        <input id="vt-SmCC-comments" aria-labelledby="vt-SmCC-label vt-comments-label" type="text" name="value(SmCCComments)" size="45" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.DiaCDesc}"/>
+                                                    <td class="dataEntryTable"><span id="vt-DiaC-label"><carlos:encode value="${requestScope.DiaCDesc}"/></span>
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
                                                         <table cellpadding='0' cellspacing='0'>
@@ -2292,11 +2293,11 @@
                                                     </td>
                                                     <input type="hidden" name="value(DiaCDate)" id="value(DiaCDate)"/>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(DiaCComments)" size="45" />
+                                                        <input id="vt-DiaC-comments" aria-labelledby="vt-DiaC-label vt-comments-label" type="text" name="value(DiaCComments)" size="45" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.PsyCDesc}"/>
+                                                    <td class="dataEntryTable"><span id="vt-PsyC-label"><carlos:encode value="${requestScope.PsyCDesc}"/></span>
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
                                                         <table cellpadding='0' cellspacing='0'>
@@ -2317,11 +2318,11 @@
                                                     </td>
                                                     <input type="hidden" name="value(PsyCDate)" id="value(PsyCDate)"/>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(PsyCComments)" size="45" />
+                                                        <input id="vt-PsyC-comments" aria-labelledby="vt-PsyC-label vt-comments-label" type="text" name="value(PsyCComments)" size="45" />
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="dataEntryTable"><carlos:encode value="${requestScope.OthCDesc}"/>
+                                                    <td class="dataEntryTable"><span id="vt-OthC-label"><carlos:encode value="${requestScope.OthCDesc}"/></span>
                                                     </td>
                                                     <td class="dataEntryTable" align="center">
                                                         <table cellpadding='0' cellspacing='0'>
@@ -2343,7 +2344,7 @@
                                                         <input type="checkbox" name="value(OthCValue)"/></td>
                                                     <input type="hidden" name="value(OthCDate)" id="value(OthCDate)"/>
                                                     <td class="dataEntryTable" align="center">
-                                                        <input type="text" name="value(OthCComments)" size="45"/></td>
+                                                        <input id="vt-OthC-comments" aria-labelledby="vt-OthC-label vt-comments-label" type="text" name="value(OthCComments)" size="45"/></td>
                                                 </tr>
                                             </table>
                                         </td>
