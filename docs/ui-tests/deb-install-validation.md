@@ -695,6 +695,12 @@ VALUES
  ('999998','2026-08-10','11:00:00','11:15:00','LOCAL_SEED_OBEC_REPORT_3',81,'','','','',NULL,'','','t',NOW(),'carlosdoc');"
 ```
 
+`episode-lifecycle-playwright-checks.js` needs both Episode module gates, `_episode`
+and `_newCasemgmt.episode`. The seeded `doctor` role holds `o` on both. The check
+uses `grantEpisodeModule` to grant the test login's provider number access for the
+run and restores or removes each provider row during cleanup. No manual role-wide
+grant is needed; see `scripts/lib/episode-module-access.js`.
+
 `cds-export-lab-documents-playwright-checks.js` (#3946) needs one more
 fixture, and it deliberately does **not** relax the package's
 `demographic.export.encryptedOnly=true` default: it gives the install a PGP
