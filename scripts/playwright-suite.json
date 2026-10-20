@@ -11570,6 +11570,21 @@
       "fixtures": "Owned FAKE patient (the run's FAKE-PW marker as last name; no master record is opened), a throwaway provider login that is the would-be recipient (lib/throwaway-login-fixture.js), one CML lab seeded by SQL by legacy-lab-display's describeLab under a random 10-digit number verified unoccupied (labReportInformation / labPatientPhysicianInfo / labTestResults, plus patientLabRouting and providerLabRouting rows), and one synthetic HL7 lab uploaded through Inbox > HL7 Lab Upload with a unique accession, matched to the owned patient and then filed under demographic 0 by SQL (where an unlinked lab lives). Cleanup removes exactly those rows by key (the CML lab after proving its header still carries the run's marker, with the providerLabRoutingLock row and the audit rows the page wrote for its number; the HL7 lab found by its accession, with its routing, measurement and upload checksum rows and, when LAB_UPLOAD_DOCUMENT_STORE is set, its archived upload file) and asserts them gone. The test login's forwarding favourites are snapshotted, one favourite to the recipient is seeded so that 'favourites unchanged' is asserted against a list that is never empty, and cleanup restores the snapshot, so it must not run concurrently with detached-delete-forward-favourites, inbox-file-forward, legacy-lab-display or another check that creates favourites (live wrapper: EXCLUSIVE=1). No clinic-wide state is changed."
     },
     {
+      "name": "cml-version-chain",
+      "script": "scripts/cml-version-chain-playwright-checks.js",
+      "tiers": [
+        "core"
+      ],
+      "assertsDatabase": true,
+      "provinces": [
+        "ON"
+      ],
+      "timeoutSec": 240,
+      "env": [],
+      "notes": "The CML report-version chain (issue #4568). Seven steps seed two synthetic orders, display and navigate their versions, acknowledge the final report and file the older version, forward both versions through the provider picker, match both unmatched versions to the owned patient, and show a visible warning without sibling links when source patient identities conflict. Reports that recycled the accession two years earlier remain untouched. The test uses the patient lab list as the popup opener and checks database rows after each mutation. CML_LABS=yes also exercises the list service-date lookup; CML identifiers must never reach the HL7 parser. Run on Ontario.",
+      "fixtures": "Owned FAKE patient, six CML reports under two unique accessions, and one throwaway forwarding recipient. All owned reports, routing, locks, audit rows and the recipient are removed and verified. Sender forwarding favorites are snapshotted and restored. Run exclusively with other checks that change forwarding favorites."
+    },
+    {
       "name": "authz-write-role-matrix",
       "script": "scripts/authz-write-role-matrix-playwright-checks.js",
       "tiers": [
